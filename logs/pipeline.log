@@ -1,0 +1,140 @@
+2026-02-03 16:49:40,075 - INFO - === INICIO DEL PIPELINE ===
+2026-02-03 16:49:40,075 - INFO - Ejecutando download_data.py...
+2026-02-03 16:49:40,951 - INFO - download_data.py ejecutado correctamente.
+2026-02-03 16:49:40,951 - INFO - Ejecutando etl.py...
+2026-02-03 16:49:44,141 - INFO - etl.py ejecutado correctamente.
+2026-02-03 16:49:44,141 - INFO - === PIPELINE COMPLETADO ===
+2026-02-05 13:27:18,558 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:27:18,558 - ERROR - ARCHIVO NO ENCONTRADO: src/download_data.py
+2026-02-05 13:27:18,558 - CRITICAL - El pipeline se detuvo por un error: No se encontró el script en: src/download_data.py
+2026-02-05 13:28:54,431 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:28:54,433 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:28:55,783 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:28:55,783 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:29:00,314 - ERROR - Error crítico en src/etl.py: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/etl.py']' returned non-zero exit status 1.
+2026-02-05 13:29:00,314 - CRITICAL - El pipeline se detuvo por un error: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/etl.py']' returned non-zero exit status 1.
+2026-02-05 13:30:28,422 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:30:28,422 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:30:28,886 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:30:28,886 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:30:52,100 - INFO - src/etl.py ejecutado correctamente.
+2026-02-05 13:30:52,100 - INFO - Ejecutando src/scrapers/fuel_scraper.py...
+2026-02-05 13:30:53,065 - ERROR - Error crítico en src/scrapers/fuel_scraper.py: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/scrapers/fuel_scraper.py']' returned non-zero exit status 1.
+2026-02-05 13:30:53,065 - CRITICAL - El pipeline se detuvo por un error: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/scrapers/fuel_scraper.py']' returned non-zero exit status 1.
+2026-02-05 13:45:24,316 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:45:24,317 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:45:24,906 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:45:24,906 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:45:46,969 - INFO - src/etl.py ejecutado correctamente.
+2026-02-05 13:45:46,969 - INFO - Ejecutando src/scrapers/fuel_scraper.py...
+2026-02-05 13:49:01,898 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:49:01,898 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:49:02,772 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:49:02,772 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:49:04,296 - INFO - src/etl.py ejecutado correctamente.
+2026-02-05 13:49:04,296 - INFO - Ejecutando src/scrapers/fuel_scraper.py...
+2026-02-05 13:49:06,167 - INFO - src/scrapers/fuel_scraper.py ejecutado correctamente.
+2026-02-05 13:49:06,167 - INFO - Ejecutando src/scrapers/update_master_data.py...
+2026-02-05 13:49:06,847 - ERROR - Error crítico en src/scrapers/update_master_data.py: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/scrapers/update_master_data.py']' returned non-zero exit status 1.
+2026-02-05 13:49:06,847 - CRITICAL - El pipeline se detuvo por un error: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/scrapers/update_master_data.py']' returned non-zero exit status 1.
+2026-02-05 13:51:18,447 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:51:18,448 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:51:19,088 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:51:19,088 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:51:20,231 - INFO - src/etl.py ejecutado correctamente.
+2026-02-05 13:51:20,236 - INFO - Ejecutando src/scrapers/fuel_scraper.py...
+2026-02-05 13:51:22,226 - INFO - src/scrapers/fuel_scraper.py ejecutado correctamente.
+2026-02-05 13:51:22,226 - INFO - Ejecutando src/scrapers/update_master_data.py...
+2026-02-05 13:51:23,727 - INFO - src/scrapers/update_master_data.py ejecutado correctamente.
+2026-02-05 13:51:23,727 - INFO - Ejecutando src/enrichment/weather_api.py...
+2026-02-05 13:51:24,512 - ERROR - Error crítico en src/enrichment/weather_api.py: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/enrichment/weather_api.py']' returned non-zero exit status 1.
+2026-02-05 13:51:24,512 - CRITICAL - El pipeline se detuvo por un error: Command '['C:\\Users\\JUAN\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'src/enrichment/weather_api.py']' returned non-zero exit status 1.
+2026-02-05 13:53:23,578 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 13:53:23,579 - INFO - Ejecutando src/download_data.py...
+2026-02-05 13:53:24,687 - INFO - src/download_data.py ejecutado correctamente.
+2026-02-05 13:53:24,687 - INFO - Ejecutando src/etl.py...
+2026-02-05 13:53:25,776 - INFO - src/etl.py ejecutado correctamente.
+2026-02-05 13:53:25,777 - INFO - Ejecutando src/scrapers/fuel_scraper.py...
+2026-02-05 13:53:27,663 - INFO - src/scrapers/fuel_scraper.py ejecutado correctamente.
+2026-02-05 13:53:27,663 - INFO - Ejecutando src/scrapers/update_master_data.py...
+2026-02-05 13:53:29,055 - INFO - src/scrapers/update_master_data.py ejecutado correctamente.
+2026-02-05 13:53:29,055 - INFO - Ejecutando src/enrichment/weather_api.py...
+2026-02-05 13:53:37,296 - INFO - src/enrichment/weather_api.py ejecutado correctamente.
+2026-02-05 13:53:37,296 - INFO - === PIPELINE COMPLETADO CON ÉXITO ===
+2026-02-05 16:23:38,971 - INFO - === INICIO DEL PIPELINE GLOBAL DASHLOGISTICS ===
+2026-02-05 16:23:38,971 - INFO - Ejecutando descarga de datos...
+2026-02-05 16:23:39,200 - INFO - Ejecutando ETL principal...
+2026-02-05 16:23:39,200 - INFO - === INICIO DEL ETL ===
+2026-02-05 16:23:39,203 - INFO - Cargando datos desde data\raw\shipping_data.csv
+2026-02-05 16:23:39,204 - INFO - Datos cargados correctamente. Filas: 52
+2026-02-05 16:23:39,204 - INFO - Iniciando limpieza y validación de datos
+2026-02-05 16:23:39,209 - INFO - Columna population_per_rank creada
+2026-02-05 16:23:39,214 - INFO - Limpieza completada. Filas finales: 52
+2026-02-05 16:23:39,214 - INFO - Datos limpios guardados en CSV: data\clean\shipping_data_clean.csv
+2026-02-05 16:23:39,214 - INFO - Subiendo datos validados a la base de datos...
+2026-02-05 16:23:39,309 - INFO - Tabla 'shipping_stats' actualizada con éxito en PostgreSQL
+2026-02-05 16:23:39,309 - INFO - === ETL COMPLETADO ===
+2026-02-05 16:23:39,309 - INFO - Scraping de precios de combustible...
+2026-02-05 16:23:39,309 - INFO - Iniciando scraping de precios AAA
+2026-02-05 16:23:39,859 - INFO - Completado: 51 estados en DB
+2026-02-05 16:23:39,859 - INFO - Actualización maestra...
+2026-02-05 16:23:39,859 - INFO - Iniciando actualización de la tabla maestra...
+2026-02-05 16:23:39,867 - INFO - Extrayendo población de Wikipedia...
+2026-02-05 16:23:40,204 - INFO - Sincronizando con precios de Diesel desde DB...
+2026-02-05 16:23:40,249 - INFO - Éxito: Tabla 'master_shipping_data' actualizada correctamente.
+2026-02-05 16:23:40,249 - INFO - Enriquecimiento con clima...
+2026-02-05 16:23:40,249 - INFO - Iniciando consulta a OpenWeather API...
+2026-02-05 16:23:40,341 - INFO - Datos obtenidos para CALIFORNIA: -1.14°C
+2026-02-05 16:23:40,399 - INFO - Datos obtenidos para TEXAS: 4.97°C
+2026-02-05 16:23:40,460 - INFO - Datos obtenidos para FLORIDA: 8.67°C
+2026-02-05 16:23:40,539 - INFO - Datos obtenidos para NEW YORK: -3.79°C
+2026-02-05 16:23:40,609 - INFO - Datos obtenidos para ILLINOIS: -6.12°C
+2026-02-05 16:23:40,669 - INFO - Datos obtenidos para PENNSYLVANIA: -5.35°C
+2026-02-05 16:23:40,756 - INFO - Datos obtenidos para OHIO: -10.81°C
+2026-02-05 16:23:40,831 - INFO - Datos obtenidos para GEORGIA: 2.41°C
+2026-02-05 16:23:40,909 - INFO - Datos obtenidos para NORTH CAROLINA: -0.16°C
+2026-02-05 16:23:40,981 - INFO - Datos obtenidos para MICHIGAN: -6.96°C
+2026-02-05 16:23:41,061 - INFO - Datos obtenidos para NEW JERSEY: -4.18°C
+2026-02-05 16:23:41,121 - INFO - Datos obtenidos para VIRGINIA: 0.22°C
+2026-02-05 16:23:41,201 - INFO - Datos obtenidos para WASHINGTON: 2.75°C
+2026-02-05 16:23:41,293 - INFO - Datos obtenidos para MASSACHUSETTS: -3.01°C
+2026-02-05 16:23:41,349 - INFO - Datos obtenidos para ARIZONA: -0.69°C
+2026-02-05 16:23:41,409 - INFO - Datos obtenidos para INDIANA: -7.82°C
+2026-02-05 16:23:41,479 - INFO - Datos obtenidos para TENNESSEE: -5.28°C
+2026-02-05 16:23:41,549 - INFO - Datos obtenidos para MISSOURI: 0.44°C
+2026-02-05 16:23:41,969 - INFO - Datos obtenidos para MARYLAND: -1.96°C
+2026-02-05 16:23:42,049 - INFO - Datos obtenidos para WISCONSIN: -4.48°C
+2026-02-05 16:23:42,129 - INFO - Datos obtenidos para MINNESOTA: -3.03°C
+2026-02-05 16:23:42,209 - INFO - Datos obtenidos para COLORADO: 29.68°C
+2026-02-05 16:23:42,279 - INFO - Datos obtenidos para ALABAMA: -0.32°C
+2026-02-05 16:23:42,348 - INFO - Datos obtenidos para SOUTH CAROLINA: 1.36°C
+2026-02-05 16:23:42,409 - INFO - Datos obtenidos para LOUISIANA: 5.54°C
+2026-02-05 16:23:42,479 - INFO - Datos obtenidos para KENTUCKY: 17.52°C
+2026-02-05 16:23:42,559 - INFO - Datos obtenidos para OREGON: -4.88°C
+2026-02-05 16:23:42,639 - INFO - Datos obtenidos para OKLAHOMA: 7.0°C
+2026-02-05 16:23:42,699 - INFO - Datos obtenidos para CONNECTICUT: -3.95°C
+2026-02-05 16:23:42,759 - INFO - Datos obtenidos para PUERTO RICO: 35.82°C
+2026-02-05 16:23:42,829 - INFO - Datos obtenidos para IOWA: 0.93°C
+2026-02-05 16:23:42,893 - INFO - Datos obtenidos para MISSISSIPPI: 1.67°C
+2026-02-05 16:23:42,979 - INFO - Datos obtenidos para ARKANSAS: 1.43°C
+2026-02-05 16:23:43,039 - INFO - Datos obtenidos para UTAH: -2.61°C
+2026-02-05 16:23:43,119 - INFO - Datos obtenidos para KANSAS: 5.7°C
+2026-02-05 16:23:43,199 - INFO - Datos obtenidos para NEVADA: -7.54°C
+2026-02-05 16:23:43,279 - INFO - Datos obtenidos para NEW MEXICO: 5.03°C
+2026-02-05 16:23:43,359 - INFO - Datos obtenidos para NEBRASKA: 7.69°C
+2026-02-05 16:23:43,453 - INFO - Datos obtenidos para WEST VIRGINIA: -7.69°C
+2026-02-05 16:23:43,529 - INFO - Datos obtenidos para IDAHO: -6.95°C
+2026-02-05 16:23:43,609 - INFO - Datos obtenidos para HAWAII: 16.01°C
+2026-02-05 16:23:43,679 - INFO - Datos obtenidos para MAINE: -7.79°C
+2026-02-05 16:23:43,739 - INFO - Datos obtenidos para NEW HAMPSHIRE: -4.87°C
+2026-02-05 16:23:43,799 - INFO - Datos obtenidos para RHODE ISLAND: -2.34°C
+2026-02-05 16:23:43,879 - INFO - Datos obtenidos para MONTANA: 1.71°C
+2026-02-05 16:23:43,959 - INFO - Datos obtenidos para DELAWARE: -3.2°C
+2026-02-05 16:23:44,039 - INFO - Datos obtenidos para SOUTH DAKOTA: 4.48°C
+2026-02-05 16:23:44,109 - INFO - Datos obtenidos para NORTH DAKOTA: 3.46°C
+2026-02-05 16:23:44,189 - INFO - Datos obtenidos para ALASKA: -19.89°C
+2026-02-05 16:23:44,269 - INFO - Datos obtenidos para DISTRICT OF COLUMBIA: -1.29°C
+2026-02-05 16:23:44,361 - INFO - Datos obtenidos para VERMONT: -8.05°C
+2026-02-05 16:23:44,441 - INFO - Datos obtenidos para WYOMING: -1.36°C
+2026-02-05 16:23:44,492 - INFO - Clima integrado con éxito en 'master_shipping_data'
+2026-02-05 16:23:44,499 - INFO - === PIPELINE COMPLETADO CON ÉXITO ===
