@@ -1,3 +1,4 @@
+# ruff: noqa: E402
 import logging
 from pathlib import Path
 import sys
@@ -15,23 +16,56 @@ from etl.scrapers.fuel_scraper import scrape_fuel_prices
 from etl.scrapers.update_master_data import update_everything
 from etl.enrichment.weather_api import get_weather_data
 
+# Generar un run_id para trazabilidad y añadirlo como filtro de logging
+import uuid
+
+# Asegurarnos de que cada ejecución tenga un ID único (se puede pasar desde entorno)
+RUN_ID = os.getenv('PIPELINE_RUN_ID') or uuid.uuid4().hex
+os.environ['PIPELINE_RUN_ID'] = RUN_ID
+
 # Configurar logging del orquestador
 # Al estar en la raíz, creará la carpeta /logs aquí mismo
 LOG_PATH = Path("logs/pipeline.log")
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
+class RunIdFilter(logging.Filter):
+    def __init__(self, run_id):
+        super().__init__()
+        self.run_id = run_id
+
+    def filter(self, record):
+        record.run_id = self.run_id
+        return True
+
+class RunIdFormatter(logging.Formatter):
+    """Formatter que garantiza que `run_id` siempre exista en el record."""
+    def format(self, record):
+        if not hasattr(record, "run_id"):
+            record.run_id = os.getenv("PIPELINE_RUN_ID", "-")
+        return super().format(record)
+
+# Configurar logging con un formatter que no falle si `run_id` no está presente
 logging.basicConfig(
     filename=LOG_PATH,
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(run_id)s - %(message)s"
 )
 
 # Handler para ver la ejecución en tiempo real por terminal
 console = logging.StreamHandler()
 console.setLevel(logging.INFO)
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+formatter = RunIdFormatter("%(asctime)s - %(levelname)s - %(run_id)s - %(message)s")
 console.setFormatter(formatter)
-logging.getLogger().addHandler(console)
+root_logger = logging.getLogger()
+# Añadimos el filtro al logger raíz y aseguramos que cada handler use el RunIdFormatter
+root_logger.addFilter(RunIdFilter(RUN_ID))
+for h in list(root_logger.handlers):
+    try:
+        h.setFormatter(RunIdFormatter(h.formatter._fmt))
+    except Exception:
+        # Si el handler no tiene un _fmt (contrario a lo esperado), configurar un formatter por defecto
+        h.setFormatter(RunIdFormatter("%(asctime)s - %(levelname)s - %(run_id)s - %(message)s"))
+root_logger.addHandler(console)
 
 
 def run_pipeline():

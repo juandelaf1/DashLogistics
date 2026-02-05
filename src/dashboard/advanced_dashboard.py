@@ -1,11 +1,8 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
-import plotly.graph_objects as go
 from pathlib import Path
 import sys
-import logging
 
 # --- CONFIGURACIÓN DE RUTAS ---
 # Buscamos database.py en el mismo nivel o uno arriba
@@ -59,11 +56,12 @@ def load_and_preprocess(limit=None):
     try:
         engine = get_engine()
         query = "SELECT * FROM master_shipping_data"
-        if limit: query += f" LIMIT {limit}"
+        if limit:
+            query += f" LIMIT {limit}"
         df = pd.read_sql(query, engine)
-        
-        if df.empty: return df
 
+        if df.empty:
+            return df
         # Normalización
         df.columns = [c.lower() for c in df.columns]
         df['state_up'] = df['state'].str.upper().str.strip()

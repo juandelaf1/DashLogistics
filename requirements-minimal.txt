@@ -1,0 +1,9 @@
+pandas
+pydantic
+sqlalchemy
+python-dotenv
+requests
+beautifulsoup4
+psycopg2-binary
+streamlit
+python-json-logger

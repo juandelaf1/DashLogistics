@@ -1,0 +1,24 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: shipping_db
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # Optional: Supabase/Studio service using image if you want to self-host more
+  # supabase:
+  #   image: supabase/postgres:latest
+  #   environment:
+  #     POSTGRES_PASSWORD: admin
+  #   ports:
+  #     - "5433:5432"
+
+volumes:
+  db_data:
