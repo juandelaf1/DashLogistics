@@ -2,5 +2,7 @@ venv/
 .env
 data/raw/
 data/clean/
+logs/
 __pycache__/
 *.pyc
+n8n_data/

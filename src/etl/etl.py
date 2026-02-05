@@ -83,6 +83,13 @@ def clean_data(df):
 def save_data(df):
     # Guardar en CSV local
     CLEAN_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    # Añadir traceability id si existe
+    run_id = os.getenv('PIPELINE_RUN_ID')
+    if run_id is not None:
+        df = df.copy()
+        df['pipeline_run_id'] = run_id
+
     df.to_csv(CLEAN_PATH, index=False)
     logger.info(f"Datos limpios guardados en CSV: {CLEAN_PATH}")
 
@@ -100,6 +107,12 @@ def run_etl():
         
         # 4. Cargar en Base de Datos (SQL)
         logger.info("Subiendo datos validados a la base de datos...")
+        # Añadir pipeline run id a la tabla si está presente
+        run_id = os.getenv('PIPELINE_RUN_ID')
+        if run_id is not None and 'pipeline_run_id' not in df_clean.columns:
+            df_clean = df_clean.copy()
+            df_clean['pipeline_run_id'] = run_id
+
         df_clean.to_sql(
             name='shipping_stats', 
             con=engine, 
