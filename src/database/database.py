@@ -24,6 +24,6 @@ def get_engine():
 if __name__ == "__main__":
     try:
         with engine.connect() as conn:
-            print(f"✅ Conexión exitosa a la base de datos de DashLogistics")
+            print("✅ Conexión exitosa a la base de datos de DashLogistics")
     except Exception as e:
         print(f"❌ Error de conexión: {e}")

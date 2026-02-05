@@ -1,6 +1,4 @@
 import pandas as pd
-import pytest
-from pathlib import Path
 
 import src.etl.etl as etl
 

@@ -1,7 +1,7 @@
+# ruff: noqa: E402
 import logging
 from pathlib import Path
 import sys
-import os
 
 # Asegurarnos de que `src/` esté en sys.path para imports internos
 SRC_DIR = Path(__file__).resolve().parent / "src"

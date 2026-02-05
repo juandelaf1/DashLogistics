@@ -25,7 +25,7 @@ def run_analysis():
     r2 = r2_score(y, model.predict(X))
     mse = mean_squared_error(y, model.predict(X))
     
-    print(f"--- Resultados Regresión ---")
+    print("--- Resultados Regresión ---")
     print(f"R2 score: {r2}")
     print(f"MSE: {mse}")
     
