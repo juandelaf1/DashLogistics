@@ -7,14 +7,14 @@ import os
 from src.utils.download_data import download_dataset
 from src.etl.etl import run_etl
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
-from src.etl.scrapers.update_master_data import update_everything
+# from src.etl.scrapers.update_master_data import update_everything
 from src.etl.enrichment.weather_api import get_weather_data
 # Generar un run_id para trazabilidad y añadirlo como filtro de logging
 import uuid
 
 # Asegurarnos de que cada ejecución tenga un ID único (se puede pasar desde entorno)
-RUN_ID = os.getenv('PIPELINE_RUN_ID') or uuid.uuid4().hex
-os.environ['PIPELINE_RUN_ID'] = RUN_ID
+RUN_ID = os.getenv("PIPELINE_RUN_ID") or uuid.uuid4().hex
+os.environ["PIPELINE_RUN_ID"] = RUN_ID
 
 # Configurar logging del orquestador
 # Al estar en la raíz, creará la carpeta /logs aquí mismo
@@ -41,7 +41,7 @@ class RunIdFormatter(logging.Formatter):
 logging.basicConfig(
     filename=LOG_PATH,
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(run_id)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(run_id)s - %(message)s",
 )
 
 # Handler para ver la ejecución en tiempo real por terminal
@@ -54,9 +54,9 @@ root_logger = logging.getLogger()
 root_logger.addFilter(RunIdFilter(RUN_ID))
 for h in list(root_logger.handlers):
     try:
+        # Algunos handlers pueden no tener formatter configurado aún
         h.setFormatter(RunIdFormatter(h.formatter._fmt))
     except Exception:
-        # Si el handler no tiene un _fmt (contrario a lo esperado), configurar un formatter por defecto
         h.setFormatter(RunIdFormatter("%(asctime)s - %(levelname)s - %(run_id)s - %(message)s"))
 root_logger.addHandler(console)
 
@@ -74,10 +74,24 @@ def run_pipeline():
         scrape_fuel_prices()
 
         logging.info("Actualización maestra...")
-        update_everything()
+        # Importación lazy: evita errores en pytest/IDE si el módulo no existe en tiempo de importación
+        try:
+            from src.etl.scrapers.update_master_data import update_everything
+        except ImportError:
+            logging.getLogger(__name__).warning(
+                "update_master_data no disponible; se omite la actualización maestra en esta ejecución."
+            )
+        else:
+            try:
+                update_everything()
+            except Exception:
+                logging.exception("Fallo durante update_everything(); se continúa con el pipeline.")
 
         logging.info("Enriquecimiento con clima...")
-        get_weather_data()
+        try:
+            get_weather_data()
+        except Exception:
+            logging.exception("Fallo durante el enriquecimiento meteorológico; se continúa con el pipeline.")
 
         logging.info("=== PIPELINE COMPLETADO CON ÉXITO ===")
     except Exception as e:

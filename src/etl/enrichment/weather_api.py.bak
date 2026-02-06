@@ -1,0 +1,124 @@
+# src/etl/enrichment/weather_api.py
+import os
+import logging
+from pathlib import Path
+
+import pandas as pd
+import requests
+from pydantic import BaseModel, Field, ValidationError
+from dotenv import load_dotenv
+from src.database import get_engine
+
+load_dotenv()
+
+BASE_DIR = Path(__file__).resolve().parents[3]
+LOG_PATH = BASE_DIR / "logs" / "weather_api.log"
+LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
+
+class WeatherDataSchema(BaseModel):
+    st_ref: str
+    current_temp: float
+    weather_condition: str = Field(min_length=1)
+
+def get_weather_data():
+    """
+    Consulta la API de OpenWeather para cada estado presente en master_shipping_data
+    y actualiza la tabla 'master_shipping_data' con columnas de clima.
+    """
+    if not API_KEY:
+        logger.error("OPENWEATHER_API_KEY no encontrado en el entorno. Abortando get_weather_data.")
+        return
+
+    engine = get_engine()
+    logger.info("Iniciando consulta a OpenWeather API...")
+
+    try:
+        df_states = pd.read_sql("SELECT DISTINCT state FROM master_shipping_data", engine)
+    except Exception as e:
+        logger.exception("Error al leer master_shipping_data desde la BD")
+        return
+
+    if df_states.empty:
+        logger.warning("No hay estados en master_shipping_data para consultar el clima.")
+        return
+
+    weather_results = []
+    for state in df_states['state'].dropna().unique():
+        state_q = str(state).strip()
+        if not state_q:
+            continue
+        url = f"http://api.openweathermap.org/data/2.5/weather"
+        params = {"q": f"{state_q},US", "appid": API_KEY, "units": "metric"}
+        try:
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            entry = {
+                "st_ref": state_q,
+                "current_temp": float(data.get("main", {}).get("temp")) if data.get("main") else None,
+                "weather_condition": data.get("weather", [{}])[0].get("main") if data.get("weather") else None
+            }
+            validated = WeatherDataSchema(**entry)
+            weather_results.append(validated.model_dump())
+            logger.info(f"Clima obtenido para {state_q}: {validated.current_temp}°C, {validated.weather_condition}")
+        except ValidationError as ve:
+            logger.error(f"Validación fallida para {state_q}: {ve}")
+        except requests.RequestException as re:
+            logger.warning(f"Fallo de red/API para {state_q}: {re}")
+        except Exception as e:
+            logger.exception(f"Error inesperado al obtener clima para {state_q}: {e}")
+
+    if not weather_results:
+        logger.warning("No se obtuvieron resultados válidos del clima; no se actualizará la tabla.")
+        return
+
+    df_weather = pd.DataFrame(weather_results)
+    # Normalizar clave para merge
+    df_weather['state_up'] = df_weather['st_ref'].astype(str).str.strip().str.upper()
+
+    try:
+        df_master = pd.read_sql("SELECT * FROM master_shipping_data", engine)
+    except Exception as e:
+        logger.exception("Error al leer master_shipping_data antes de merge")
+        return
+
+    if 'state' not in df_master.columns:
+        logger.error("master_shipping_data no contiene la columna 'state'. Abortando merge de clima.")
+        return
+
+    df_master['state_up'] = df_master['state'].astype(str).str.strip().str.upper()
+
+    # Evitar colisiones: eliminar columnas de clima existentes si las hay
+    for col in ['current_temp', 'weather_condition']:
+        if col in df_master.columns:
+            df_master = df_master.drop(columns=[col])
+
+    # Merge y limpieza final
+    df_merged = pd.merge(df_master, df_weather.drop(columns=['st_ref']), on='state_up', how='left')
+    df_merged = df_merged.drop(columns=['state_up'])
+
+    # Guardar de forma segura
+    try:
+        df_merged.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
+        logger.info("Clima integrado con éxito en 'master_shipping_data'.")
+    except Exception as e:
+        logger.exception("Error al guardar la tabla 'master_shipping_data' con datos de clima.")
+
+
+if __name__ == "__main__":
+    # Llama a la primera función ejecutable disponible
+    for fn in ("main", "run", "enrich_weather", "get_weather", "execute"):
+        if hasattr(__import__(__name__), fn):
+            getattr(__import__(__name__), fn)()
+            break
+
+if __name__ == "__main__":
+    for fn in ("main", "run", "enrich_weather", "get_weather", "execute"):
+        if hasattr(__import__(__name__), fn):
+            getattr(__import__(__name__), fn)()
+            break
