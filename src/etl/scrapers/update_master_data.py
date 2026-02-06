@@ -70,11 +70,11 @@ def update_everything():
         # 4. Carga final a la tabla Master
         df_final.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
         logger.info("Éxito: Tabla 'master_shipping_data' actualizada correctamente.")
-        print("✅ Actualización maestra completada (Wikipedia + Diesel).")
+        print("[OK] Actualización maestra completada (Wikipedia + Diesel).")
 
     except Exception as e:
         logger.error(f"Error durante el proceso maestro: {e}")
-        print(f"❌ Error en master_update: {e}")
+        print(f"[ERROR] Error en master_update: {e}")
 
 if __name__ == "__main__":
     update_everything()

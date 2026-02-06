@@ -37,7 +37,7 @@ def get_weather_data():
     if not API_KEY:
         error_msg = "No se encontró OPENWEATHER_API_KEY en el entorno"
         logger.error(error_msg)
-        print(f"❌ {error_msg}")
+        print(f"[ERROR] {error_msg}")
         return
 
     logger.info("Iniciando consulta a OpenWeather API...")
@@ -47,7 +47,7 @@ def get_weather_data():
         df_states = pd.read_sql("SELECT state FROM master_shipping_data", engine)
     except Exception as e:
         logger.error(f"Error al leer master_shipping_data: {e}")
-        print(f"❌ Error al conectar con la DB: {e}")
+        print(f"[ERROR] Error al conectar con la DB: {e}")
         return
 
     weather_results = []
@@ -104,10 +104,10 @@ def get_weather_data():
     try:
         df_final.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
         logger.info("Clima integrado con éxito en 'master_shipping_data'")
-        print("✅ Clima integrado correctamente en la tabla maestra.")
+        print("[OK] Clima integrado correctamente en la tabla maestra.")
     except Exception as e:
         logger.error(f"Error al guardar tabla maestra: {e}")
-        print(f"❌ Error al guardar en DB: {e}")
+        print(f"[ERROR] Error al guardar en DB: {e}")
 
 if __name__ == "__main__":
     get_weather_data()
