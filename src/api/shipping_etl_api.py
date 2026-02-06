@@ -1,38 +1,56 @@
-from flask import Flask, jsonify
+# src/api/shipping_etl_api.py
+import logging
 import subprocess
-import os
+import shlex
+from pathlib import Path
+from typing import Tuple
 
-app = Flask(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
-@app.route('/ejecutar-etl', methods=['GET'])
-def run_etl():
+ROOT = Path(__file__).resolve().parents[2]
+ETL_SCRIPT = ROOT / "src" / "etl" / "etl.py"
+
+def run_etl_process(timeout: int = 600) -> Tuple[int, str, str]:
+    """
+    Ejecuta el script ETL en un proceso separado y devuelve (returncode, stdout, stderr).
+    - timeout: segundos máximos a esperar por la ejecución.
+    """
+    if not ETL_SCRIPT.exists():
+        msg = f"Script ETL no encontrado en: {ETL_SCRIPT}"
+        logger.error(msg)
+        return 1, "", msg
+
+    cmd = f"python -u {shlex.quote(str(ETL_SCRIPT))}"
+    logger.info(f"Lanzando ETL: {cmd}")
     try:
-        # RUTA ACTUALIZADA A SRC
-        script_path = '/data/src/run_pipeline.py'
-        
-        if not os.path.exists(script_path):
-            return jsonify({
-                "status": "error", 
-                "message": f"Archivo no encontrado en: {script_path}"
-            }), 404
-
-        result = subprocess.run(['python3', script_path], capture_output=True, text=True)
-        
-        if result.returncode == 0:
-            return jsonify({
-                "status": "success", 
-                "message": "ETL de Logística completada",
-                "output": result.stdout
-            }), 200
-        else:
-            return jsonify({
-                "status": "error", 
-                "error_python": result.stderr
-            }), 500
-            
+        proc = subprocess.run(
+            shlex.split(cmd),
+            capture_output=True,
+            text=True,
+            timeout=timeout
+        )
+        stdout = proc.stdout or ""
+        stderr = proc.stderr or ""
+        logger.info(f"ETL finalizado con código {proc.returncode}")
+        if stdout:
+            logger.info(f"ETL stdout: {stdout.strip()[:1000]}")
+        if stderr:
+            logger.warning(f"ETL stderr: {stderr.strip()[:1000]}")
+        return proc.returncode, stdout, stderr
+    except subprocess.TimeoutExpired as te:
+        logger.exception("ETL excedió el tiempo máximo permitido")
+        return 2, "", f"TimeoutExpired: {te}"
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.exception("Error al ejecutar el ETL")
+        return 3, "", str(e)
 
-if __name__ == '__main__':
-    print("Servidor de ETL Logística activo en el puerto 5000...")
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    code, out, err = run_etl_process()
+    print(f"exit_code: {code}")
+    if out:
+        print("=== STDOUT ===")
+        print(out)
+    if err:
+        print("=== STDERR ===")
+        print(err)
