@@ -40,3 +40,11 @@ Thumbs.db
 # --- IDE ---
 .vscode/
 .idea/
+
+# Build metadata
+src/UNKNOWN.egg-info/
+# Backups
+*.bak
+# Editor/temp files
+*.swp
+
