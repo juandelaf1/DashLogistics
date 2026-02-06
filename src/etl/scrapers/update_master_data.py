@@ -1,4 +1,3 @@
-# src/etl/update_master_data.py
 import pandas as pd
 import requests
 import logging
@@ -8,8 +7,29 @@ from src.database import get_engine
 
 pd.set_option("future.no_silent_downcasting", True)
 
-BASE_DIR = Path(__file__).resolve().parents[2]
-LOG_PATH = BASE_DIR / "logs" / "master_update.log"
+# Determina la raíz del proyecto de forma robusta
+def find_project_root(start_path: Path = None) -> Path:
+    """
+    Asciende desde start_path hasta encontrar un marcador de proyecto.
+    Marcadores: .git, pyproject.toml, setup.cfg, requirements.txt
+    Si no se encuentra ninguno, devuelve un fallback basado en parents[3].
+    """
+    if start_path is None:
+        start_path = Path(__file__).resolve()
+    cur = start_path
+    markers = {".git", "pyproject.toml", "setup.cfg", "requirements.txt"}
+    for parent in [cur] + list(cur.parents):
+        for m in markers:
+            if (parent / m).exists():
+                return parent
+    try:
+        return Path(__file__).resolve().parents[3]
+    except Exception:
+        return Path(__file__).resolve().parents[0]
+
+
+PROJECT_ROOT = find_project_root()
+LOG_PATH = PROJECT_ROOT / "logs" / "master_update.log"
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logger = logging.getLogger(__name__)
@@ -26,17 +46,23 @@ def update_everything():
     - Poblaciones desde Wikipedia
     - Precios de diesel desde la tabla 'fuel_prices' en la BD
     """
-    engine = get_engine()
+    engine = None
+    try:
+        engine = get_engine()
+    except Exception as e:
+        logger.exception(f"No se pudo obtener engine de BD: {e}")
+        return
+
     logger.info("Iniciando actualización de la tabla maestra...")
 
-    csv_path = BASE_DIR / "data" / "clean" / "shipping_data_clean.csv"
+    csv_path = PROJECT_ROOT / "data" / "clean" / "shipping_data_clean.csv"
     if not csv_path.exists():
         logger.error(f"Archivo no encontrado en: {csv_path}")
         return
 
     try:
         # 1) Leer CSV limpio
-        df_original = pd.read_csv(csv_path)
+        df_original = pd.read_csv(csv_path, encoding="utf-8")
         if "state" not in df_original.columns:
             logger.error("El CSV no contiene la columna 'state'. Abortando.")
             return
@@ -74,15 +100,13 @@ def update_everything():
                 ].copy()
                 df_wiki.columns = ["state", "new_population"]
             else:
-                try:
+                if df_wiki.shape[1] >= 3:
                     df_wiki = df_wiki.iloc[:, [1, 2]].copy()
                     df_wiki.columns = ["state", "new_population"]
-                except Exception:
-                    df_wiki = pd.DataFrame(
-                        columns=["state", "new_population"]
-                    )
+                else:
+                    df_wiki = pd.DataFrame(columns=["state", "new_population"])
 
-        # 2b) Limpiar y normalizar Wikipedia
+        # 2b) Limpiar y normalizar Wikipedia  ✅ CORREGIDO AQUÍ
         if not df_wiki.empty:
             df_wiki["state"] = (
                 df_wiki["state"]
@@ -118,29 +142,32 @@ def update_everything():
             df_diesel = pd.read_sql(
                 "SELECT state, diesel FROM fuel_prices", engine
             )
-            df_diesel["state"] = (
-                df_diesel["state"].astype(str).str.strip().str.upper()
-            )
-            df_final = pd.merge(df_final, df_diesel, on="state", how="left")
+            if not df_diesel.empty:
+                df_diesel["state"] = (
+                    df_diesel["state"].astype(str).str.strip().str.upper()
+                )
+                df_final = pd.merge(df_final, df_diesel, on="state", how="left")
+            else:
+                logger.warning("Tabla 'fuel_prices' vacía en la BD.")
         except Exception as e:
             logger.warning(
                 f"No se pudo leer tabla 'fuel_prices' desde la BD: {e}"
             )
 
-        # 5) Calcular métricas adicionales (VECTORIAL)
+        # 5) Métrica adicional
         if {"population", "diesel"}.issubset(df_final.columns):
-            df_final["pop_per_dollar"] = (
-                df_final["population"] / df_final["diesel"]
+            df_final["pop_per_dollar"] = None
+            mask = (
+                df_final["diesel"].notna()
+                & (df_final["diesel"] != 0)
+                & df_final["population"].notna()
+            )
+            df_final.loc[mask, "pop_per_dollar"] = (
+                df_final.loc[mask, "population"]
+                / df_final.loc[mask, "diesel"]
             )
 
-            df_final.loc[
-                (df_final["diesel"] == 0)
-                | df_final["population"].isna()
-                | df_final["diesel"].isna(),
-                "pop_per_dollar",
-            ] = None
-
-        # 6) Guardar en la base de datos
+        # 6) Guardar en la BD
         df_final.to_sql(
             "master_shipping_data",
             engine,
@@ -148,18 +175,20 @@ def update_everything():
             index=False,
         )
 
-        logger.info(
-            "Éxito: Tabla 'master_shipping_data' actualizada correctamente."
-        )
+        logger.info("Éxito: Tabla 'master_shipping_data' actualizada correctamente.")
         print("[OK] Actualización maestra completada.")
 
     except requests.RequestException as re:
-        logger.exception(
-            f"Error de red al obtener datos externos: {re}"
-        )
+        logger.exception(f"Error de red al obtener datos externos: {re}")
     except Exception as e:
         logger.exception(f"Error durante el proceso maestro: {e}")
+    finally:
+        if engine is not None:
+            try:
+                engine.dispose()
+            except Exception:
+                pass
 
-        
+
 if __name__ == "__main__":
     update_everything()

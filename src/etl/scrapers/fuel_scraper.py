@@ -43,7 +43,7 @@ def scrape_fuel_prices():
         if not table:
             raise ValueError("No se encontró la tabla en la URL")
 
-        df = pd.read_html(str(table))[0]
+        df = pd.read_html(StringIO(str(table)))[0]
 
         # Normalizar columnas esperadas (algunas versiones de la web pueden variar)
         expected_cols = ['state', 'regular', 'mid_grade', 'premium', 'diesel']
