@@ -1,111 +1,118 @@
+# src/etl/enrichment/weather_api.py
 import os
-import sys
-import pandas as pd
-import requests
 import logging
 from pathlib import Path
+
+import pandas as pd
+import requests
 from pydantic import BaseModel, Field, ValidationError
 from dotenv import load_dotenv
-
-# Subimos dos niveles desde src/enrichment para encontrar database.py en src
-
 from src.database import get_engine
 
-# Cargar variables de entorno
 load_dotenv()
 
-# --- CONFIGURACIÓN ---
-BASE_DIR = Path(__file__).resolve().parent.parent.parent
+BASE_DIR = Path(__file__).resolve().parents[3]
 LOG_PATH = BASE_DIR / "logs" / "weather_api.log"
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
-engine = get_engine()
-API_KEY = os.getenv("OPENWEATHER_API_KEY")
-
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-# --- ESQUEMA DE VALIDACIÓN ---
+API_KEY = os.getenv("OPENWEATHER_API_KEY")
+
 class WeatherDataSchema(BaseModel):
     st_ref: str
     current_temp: float
     weather_condition: str = Field(min_length=1)
 
-# --- LÓGICA DE NEGOCIO ---
 def get_weather_data():
+    """
+    Consulta la API de OpenWeather para cada estado presente en master_shipping_data
+    y actualiza la tabla 'master_shipping_data' con columnas de clima.
+    """
     if not API_KEY:
-        error_msg = "No se encontró OPENWEATHER_API_KEY en el entorno"
-        logger.error(error_msg)
-        print(f"[ERROR] {error_msg}")
+        logger.error("OPENWEATHER_API_KEY no encontrado en el entorno. Abortando get_weather_data.")
         return
 
+    engine = get_engine()
     logger.info("Iniciando consulta a OpenWeather API...")
-    
+
     try:
-        # Extraemos los estados de la tabla maestra
-        df_states = pd.read_sql("SELECT state FROM master_shipping_data", engine)
+        df_states = pd.read_sql("SELECT DISTINCT state FROM master_shipping_data", engine)
     except Exception as e:
-        logger.error(f"Error al leer master_shipping_data: {e}")
-        print(f"[ERROR] Error al conectar con la DB: {e}")
+        logger.exception("Error al leer master_shipping_data desde la BD")
+        return
+
+    if df_states.empty:
+        logger.warning("No hay estados en master_shipping_data para consultar el clima.")
         return
 
     weather_results = []
-
-    for state in df_states['state']:
-        # Llamada a la API (USA para asegurar precisión)
-        url = f"http://api.openweathermap.org/data/2.5/weather?q={state},USA&appid={API_KEY}&units=metric"
+    for state in df_states['state'].dropna().unique():
+        state_q = str(state).strip()
+        if not state_q:
+            continue
+        url = f"http://api.openweathermap.org/data/2.5/weather"
+        params = {"q": f"{state_q},US", "appid": API_KEY, "units": "metric"}
         try:
-            response = requests.get(url, timeout=10)
-            if response.status_code == 200:
-                data = response.json()
-                
-                # Preparamos datos para validar
-                raw_entry = {
-                    'st_ref': state,
-                    'current_temp': data['main']['temp'],
-                    'weather_condition': data['weather'][0]['main']
-                }
-                
-                # Validación Pydantic
-                validated = WeatherDataSchema(**raw_entry)
-                weather_results.append(validated.model_dump())
-                logger.info(f"Datos obtenidos para {state}: {validated.current_temp}°C")
-                
-            else:
-                logging.warning(f"No se pudo obtener clima para {state}. Status: {response.status_code}")
+            resp = requests.get(url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            entry = {
+                "st_ref": state_q,
+                "current_temp": float(data.get("main", {}).get("temp")) if data.get("main") else None,
+                "weather_condition": data.get("weather", [{}])[0].get("main") if data.get("weather") else None
+            }
+            validated = WeatherDataSchema(**entry)
+            weather_results.append(validated.model_dump())
+            logger.info(f"Clima obtenido para {state_q}: {validated.current_temp}°C, {validated.weather_condition}")
         except ValidationError as ve:
-            logging.error(f"Error de validación en {state}: {ve}")
+            logger.error(f"Validación fallida para {state_q}: {ve}")
+        except requests.RequestException as re:
+            logger.warning(f"Fallo de red/API para {state_q}: {re}")
         except Exception as e:
-            logging.error(f"Error de conexión en {state}: {e}")
+            logger.exception(f"Error inesperado al obtener clima para {state_q}: {e}")
 
     if not weather_results:
-        logger.warning("No se obtuvieron resultados válidos del clima")
+        logger.warning("No se obtuvieron resultados válidos del clima; no se actualizará la tabla.")
         return
 
-    # Procesamiento y Merge
     df_weather = pd.DataFrame(weather_results)
-    df_master = pd.read_sql("SELECT * FROM master_shipping_data", engine)
-    
-    # Estandarización para cruce
-    df_master['state_up'] = df_master['state'].str.strip().str.upper()
-    df_weather['state_up'] = df_weather['st_ref'].str.strip().str.upper()
+    # Normalizar clave para merge
+    df_weather['state_up'] = df_weather['st_ref'].astype(str).str.strip().str.upper()
 
-    # Limpieza de columnas previas si existen (Evitar duplicidad en merge)
-    cols_to_drop = [c for c in ['current_temp', 'weather_condition'] if c in df_master.columns]
-    if cols_to_drop:
-        df_master = df_master.drop(columns=cols_to_drop)
-
-    # Merge final
-    df_final = pd.merge(df_master, df_weather.drop(columns=['st_ref']), on='state_up', how='left')
-    df_final = df_final.drop(columns=['state_up'])
-
-    # Actualización en Base de Datos
     try:
-        df_final.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
-        logger.info("Clima integrado con éxito en 'master_shipping_data'")
-        print("[OK] Clima integrado correctamente en la tabla maestra.")
+        df_master = pd.read_sql("SELECT * FROM master_shipping_data", engine)
     except Exception as e:
-        logger.error(f"Error al guardar tabla maestra: {e}")
-        print(f"[ERROR] Error al guardar en DB: {e}")
+        logger.exception("Error al leer master_shipping_data antes de merge")
+        return
+
+    if 'state' not in df_master.columns:
+        logger.error("master_shipping_data no contiene la columna 'state'. Abortando merge de clima.")
+        return
+
+    df_master['state_up'] = df_master['state'].astype(str).str.strip().str.upper()
+
+    # Evitar colisiones: eliminar columnas de clima existentes si las hay
+    for col in ['current_temp', 'weather_condition']:
+        if col in df_master.columns:
+            df_master = df_master.drop(columns=[col])
+
+    # Merge y limpieza final
+    df_merged = pd.merge(df_master, df_weather.drop(columns=['st_ref']), on='state_up', how='left')
+    df_merged = df_merged.drop(columns=['state_up'])
+
+    # Guardar de forma segura
+    try:
+        df_merged.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
+        logger.info("Clima integrado con éxito en 'master_shipping_data'.")
+    except Exception as e:
+        logger.exception("Error al guardar la tabla 'master_shipping_data' con datos de clima.")
+
 
 if __name__ == "__main__":
-    get_weather_data()
+    # Llama a la primera función ejecutable disponible
+    for fn in ("main", "run", "enrich_weather", "get_weather", "execute"):
+        if hasattr(__import__(__name__), fn):
+            getattr(__import__(__name__), fn)()
+            break
