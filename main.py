@@ -3,19 +3,12 @@ import logging
 from pathlib import Path
 import sys
 import os
-
-# Asegurarnos de que `src/` esté en sys.path para imports internos
-SRC_DIR = Path(__file__).resolve().parent / "src"
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
 # Importar funciones directamente para facilitar testing y control de errores
-from utils.download_data import download_dataset
-from etl.etl import run_etl
-from etl.scrapers.fuel_scraper import scrape_fuel_prices
-from etl.scrapers.update_master_data import update_everything
-from etl.enrichment.weather_api import get_weather_data
-
+from src.utils.download_data import download_dataset
+from src.etl.etl import run_etl
+from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
+from src.etl.scrapers.update_master_data import update_everything
+from src.etl.enrichment.weather_api import get_weather_data
 # Generar un run_id para trazabilidad y añadirlo como filtro de logging
 import uuid
 

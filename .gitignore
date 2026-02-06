@@ -1,8 +1,42 @@
-venv/
-.env
-data/raw/
-data/clean/
-logs/
+# --- Python ---
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# --- Virtual environments ---
+venv/
+.env
+.env.*
+
+# --- Data ---
+data/raw/
+data/interim/
+data/tmp/
+*.csv
+*.parquet
+*.xlsx
+
+# --- Logs ---
+logs/
+*.log
+
+# --- n8n ---
 n8n_data/
+
+# --- Alembic ---
+alembic/versions/*.pyc
+
+# --- Streamlit cache ---
+.streamlit/
+
+# --- Docker ---
+*.pid
+
+# --- OS files ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.vscode/
+.idea/

@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 import os
 import logging
 from pydantic import BaseModel, Field, field_validator, ValidationError
-from database import get_engine  # Importamos la conexión centralizada
+from src.database import get_engine
+
 
 load_dotenv()
 
