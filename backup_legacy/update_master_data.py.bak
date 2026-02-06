@@ -1,14 +1,12 @@
 import sys
 from pathlib import Path
 
-# --- PARCHE DE RUTAS PARA DASH LOGISTICS ---
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import pandas as pd
 import requests
 import logging
 from io import StringIO
-from database import get_engine
+from src.database import get_engine
 
 # Configuración de Pandas y Logging
 pd.set_option('future.no_silent_downcasting', True)
