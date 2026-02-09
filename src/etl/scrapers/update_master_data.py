@@ -1,6 +1,7 @@
 import pandas as pd
 import requests
 import logging
+import os
 from io import StringIO
 from pathlib import Path
 from src.database import get_engine
@@ -38,14 +39,22 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-
 def update_everything():
     """
     Actualiza la tabla maestra 'master_shipping_data' combinando:
     - CSV limpio local (data/clean/shipping_data_clean.csv)
     - Poblaciones desde Wikipedia
     - Precios de diesel desde la tabla 'fuel_prices' en la BD
+    - Trazabilidad completa con run_id
     """
+    # Obtener run_id para trazabilidad
+    run_id = os.getenv("PIPELINE_RUN_ID")
+    if run_id:
+        logger.info(f"Iniciando actualización maestra con run_id: {run_id}")
+    else:
+        logger.warning("PIPELINE_RUN_ID no encontrado en entorno")
+        run_id = "unknown"
+    
     engine = None
     try:
         engine = get_engine()
@@ -106,7 +115,7 @@ def update_everything():
                 else:
                     df_wiki = pd.DataFrame(columns=["state", "new_population"])
 
-        # 2b) Limpiar y normalizar Wikipedia  ✅ CORREGIDO AQUÍ
+        # 2b) Limpiar y normalizar Wikipedia
         if not df_wiki.empty:
             df_wiki["state"] = (
                 df_wiki["state"]
@@ -167,7 +176,11 @@ def update_everything():
                 / df_final.loc[mask, "diesel"]
             )
 
-        # 6) Guardar en la BD
+        # 6) Añadir trazabilidad con run_id
+        df_final["pipeline_run_id"] = run_id
+        df_final["updated_at"] = pd.Timestamp.now()
+
+        # 7) Guardar en la BD
         df_final.to_sql(
             "master_shipping_data",
             engine,
@@ -175,8 +188,8 @@ def update_everything():
             index=False,
         )
 
-        logger.info("Éxito: Tabla 'master_shipping_data' actualizada correctamente.")
-        print("[OK] Actualización maestra completada.")
+        logger.info(f"Éxito: Tabla 'master_shipping_data' actualizada con {len(df_final)} registros (run_id: {run_id}).")
+        print(f"[OK] Actualización maestra completada (run_id: {run_id}).")
 
     except requests.RequestException as re:
         logger.exception(f"Error de red al obtener datos externos: {re}")

@@ -3,12 +3,14 @@ from io import StringIO
 import requests
 from bs4 import BeautifulSoup
 import logging
+import os
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from pathlib import Path
 from src.database import get_engine
 
 URL = "https://gasprices.aaa.com/state-gas-price-averages/"
-LOG_PATH = Path(__file__).resolve().parents[3] / "logs" / "fuel_scraper.log"
+BASE_DIR = Path(__file__).resolve().parents[3]
+LOG_PATH = BASE_DIR / "logs" / "fuel_scraper.log"
 LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -30,8 +32,16 @@ def scrape_fuel_prices():
     """
     Scrapea la tabla de precios de gasolina desde AAA y guarda en la tabla `fuel_prices`.
     La conexión a la base de datos se crea dentro de la función para evitar efectos secundarios
-    en el import time.
+    en el import time. Incluye trazabilidad completa con run_id.
     """
+    # Obtener run_id para trazabilidad
+    run_id = os.getenv("PIPELINE_RUN_ID")
+    if run_id:
+        logger.info(f"Iniciando scraping de precios AAA con run_id: {run_id}")
+    else:
+        logger.warning("PIPELINE_RUN_ID no encontrado en entorno")
+        run_id = "unknown"
+    
     engine = get_engine()
     logger.info("Iniciando scraping de precios AAA")
     try:
@@ -48,48 +58,74 @@ def scrape_fuel_prices():
         # Normalizar columnas esperadas (algunas versiones de la web pueden variar)
         expected_cols = ['state', 'regular', 'mid_grade', 'premium', 'diesel']
         if df.shape[1] >= 5:
-            df = df.iloc[:, :5]
             df.columns = expected_cols
         else:
-            raise ValueError("La tabla no tiene las columnas esperadas")
+            logger.warning(f"Columnas inesperadas: {df.columns.tolist()}")
+            # Intentar mapeo automático
+            col_mapping = {}
+            for i, col in enumerate(df.columns):
+                if i < len(expected_cols):
+                    col_mapping[col] = expected_cols[i]
+            df = df.rename(columns=col_mapping)
 
+        # Validar y limpiar datos
         valid_rows = []
-        for _, row in df.iterrows():
+        invalid_count = 0
+        
+        for index, row in df.iterrows():
             try:
-                data = row.to_dict()
-                # Normalizar valores monetarios a float
+                # Limpiar valores numéricos
+                cleaned_row = {}
+                cleaned_row['state'] = str(row.iloc[0]).strip().upper()
+                
                 for col in ['regular', 'mid_grade', 'premium', 'diesel']:
-                    val = data.get(col)
-                    if pd.isna(val):
-                        data[col] = None
-                    elif isinstance(val, str):
-                        cleaned = val.replace('$', '').replace(',', '').strip()
-                        data[col] = float(cleaned) if cleaned not in ("", "—", "-") else None
-                    else:
-                        data[col] = float(val) if val is not None else None
-
-                # Validación con pydantic (omitimos filas con valores faltantes en campos obligatorios)
-                validated = FuelPriceSchema(**data)
+                    if col in expected_cols:
+                        # Encontrar el índice correcto de la columna
+                        col_idx = expected_cols.index(col)
+                        if col_idx < len(row):
+                            value = str(row.iloc[col_idx]).replace('$', '').replace(',', '')
+                            try:
+                                cleaned_row[col] = float(value)
+                            except ValueError:
+                                cleaned_row[col] = None
+                        else:
+                            cleaned_row[col] = None
+                
+                # Validar con Pydantic
+                validated = FuelPriceSchema(**cleaned_row)
                 valid_rows.append(validated.model_dump())
-            except ValidationError as e:
-                logger.warning(f"Fila omitida: {data.get('state')} - {e}")
-            except Exception as e:
-                logger.debug(f"Ignorando fila por error de parseo: {e}")
+                
+            except (ValidationError, ValueError, IndexError) as e:
+                invalid_count += 1
+                logger.warning(f"Fila {index} descartada: {e}")
+
+        if invalid_count:
+            logger.info(f"Se descartaron {invalid_count} filas no válidas")
 
         if not valid_rows:
-            logger.warning("No se obtuvieron filas válidas del scraping")
-            return
+            raise ValueError("No se encontraron datos válidos después de la validación")
 
         df_clean = pd.DataFrame(valid_rows)
+        
+        # Añadir trazabilidad
+        df_clean['pipeline_run_id'] = run_id
+        df_clean['scraped_at'] = pd.Timestamp.now()
+        df_clean['data_source'] = 'AAA'
 
-        # Guardar en la base de datos
+        # Guardar en base de datos
         df_clean.to_sql('fuel_prices', engine, if_exists='replace', index=False)
-        logger.info(f"Completado: {len(df_clean)} estados guardados en 'fuel_prices'")
+        
+        logger.info(f"✅ {len(df_clean)} registros de precios de combustible guardados (run_id: {run_id})")
+        print(f"[OK] Scraping completado: {len(df_clean)} estados procesados (run_id: {run_id})")
+        
+        return df_clean
 
-    except requests.RequestException as re:
-        logger.exception(f"Error de red al obtener la página: {re}")
+    except requests.RequestException as e:
+        logger.error(f"Error de red al acceder a {URL}: {e}")
+        raise
     except Exception as e:
-        logger.exception(f"Error en scrape_fuel_prices: {e}")
+        logger.error(f"Error durante scraping: {e}")
+        raise
 
 if __name__ == "__main__":
     scrape_fuel_prices()
