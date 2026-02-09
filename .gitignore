@@ -48,3 +48,18 @@ src/UNKNOWN.egg-info/
 # Editor/temp files
 *.swp
 
+*.bak
+# Backup files
+*.bak
+*.backup
+*.old
+
+# Logs
+logs/
+*.log
+
+# Data files
+data/raw/*
+data/clean/*
+!data/raw/.gitkeep
+!data/clean/.gitkeep
