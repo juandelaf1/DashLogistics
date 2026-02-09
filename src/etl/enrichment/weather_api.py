@@ -6,7 +6,7 @@ import time
 
 import pandas as pd
 import requests
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from src.database import get_engine
 
