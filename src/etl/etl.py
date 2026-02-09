@@ -107,7 +107,7 @@ def run_etl():
         df_clean.to_sql(name="shipping_stats", con=engine, if_exists="replace", index=False)
         logger.info("Tabla 'shipping_stats' actualizada con éxito en la base de datos")
         logger.info("=== ETL COMPLETADO ===")
-    except Exception as e:
+    except Exception:
         logger.critical("Error crítico en el pipeline ETL", exc_info=True)
         raise
 
