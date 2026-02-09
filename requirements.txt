@@ -1,33 +1,38 @@
 # --- Core ETL ---
-pandas
-numpy
-requests
-python-dotenv
-beautifulsoup4
+pandas==2.2.2
+numpy==2.3.4
+requests==2.32.5
+python-dotenv==1.1.1
+beautifulsoup4==4.14.2
+lxml==6.0.2
 
 # --- Database ---
-sqlalchemy
-psycopg2-binary
+sqlalchemy==2.0.44
+psycopg2-binary==2.9.11
+alembic==1.18.3
 
 # --- Dashboard ---
-streamlit
-plotly
-folium
+streamlit==1.50.0
+plotly==6.3.0
+folium==0.20.0
 
 # --- Visualization ---
-matplotlib
-seaborn
+matplotlib==3.10.8
+seaborn==0.13.2
 
-# --- Optional but useful for ETL ---
+# --- Optional ---
 openpyxl
-pyarrow
+pyarrow==21.0.0
 
 # --- Logging ---
-python-json-logger
+python-json-logger==3.3.0
 
-# --- API Frameworks (Flask + FastAPI) ---
+# --- API ---
 flask
 fastapi
 uvicorn
-pydantic
+pydantic==2.12.3
 
+# --- Testing ---
+pytest==9.0.2
+pytest-cov
