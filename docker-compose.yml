@@ -29,11 +29,13 @@ services:
       context: .
       dockerfile: etl/Dockerfile
     container_name: shipping_etl
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql://postgres:admin@db:5432/shipping_db
-      - RAW_DATA_PATH=/app/data/raw
     depends_on:
       - db
+
 
   dashboard:
     build:
