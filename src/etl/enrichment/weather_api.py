@@ -210,8 +210,8 @@ def get_weather_data():
 
 if __name__ == "__main__":
     get_weather_data()
-        logger.exception("Error guardando datos climáticos en la base de datos")
-        raise
+    logger.exception("Error guardando datos climáticos en la base de datos")
+    raise
 
 if __name__ == "__main__":
     get_weather_data()
