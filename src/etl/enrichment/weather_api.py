@@ -58,7 +58,7 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
     
     city = state_cities.get(state_code, state_code)  # Fallback al código del estado
     
-    url = f"http://api.weatherapi.com/v1/current.json"
+    url = "http://api.weatherapi.com/v1/current.json"
     params = {
         'key': WEATHERAPI_KEY,
         'q': f"{city}, {state_code}, USA",
@@ -73,7 +73,7 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
         
         # Extraer datos relevantes
         current = data['current']
-        location = data['location']
+        
         
         return {
             'state': state_code,
@@ -85,7 +85,7 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
             'data_source': 'WeatherAPI.com'
         }
         
-    except Exception as e:
+    except Exception:
         logger.error(f"Error obteniendo datos de WeatherAPI para {state_code}: {e}")
         raise
 
@@ -109,7 +109,7 @@ def get_weather_data_openweather(state_code: str) -> dict:
     
     lat, lon = state_coords[state_code]
     
-    url = f"https://api.openweathermap.org/data/2.5/weather"
+    url = "https://api.openweathermap.org/data/2.5/weather"
     params = {
         'lat': lat,
         'lon': lon,
