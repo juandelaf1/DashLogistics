@@ -63,3 +63,56 @@ data/raw/*
 data/clean/*
 !data/raw/.gitkeep
 !data/clean/.gitkeep
+
+# === Archivos temporales ===
+*.bak
+*.backup
+*.old
+*~
+*.swp
+*.swo
+
+# === Logs ===
+logs/*.log
+*.log
+
+# === Data files (no commitear datos grandes) ===
+data/raw/*.csv
+data/clean/*.csv
+!data/raw/.gitkeep
+!data/clean/.gitkeep
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# === Virtual environments ===
+venv/
+env/
+ENV/
+.venv/
+
+# === IDEs ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Testing ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# === Build ===
+build/
+dist/
+*.egg-info/
