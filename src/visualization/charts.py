@@ -27,13 +27,7 @@ class AdvancedCharts:
             texttemplate='%{text}',
             textfont={"size": 10},
             hoverongaps=False,
-            colorbar=dict(
-                title="Correlation",
-                titleside="right",
-                tickmode="linear",
-                tick0=-1,
-                tick1=1
-            )
+            colorbar=dict(title="Correlation")
         ))
         
         fig.update_layout(
@@ -52,50 +46,51 @@ class AdvancedCharts:
         figures = []
         
         for i, col in enumerate(columns[:4]):  # Limitar a 4 gráficos
-            data = self.df[col].dropna()
-            
-            fig = go.Figure()
-            
-            # Histograma
-            fig.add_trace(go.Histogram(
-                x=data,
-                name=col,
-                nbinsx=30,
-                opacity=0.7,
-                marker_color=self.colors[i % len(self.colors)],
-                hovertemplate=f'<b>{col}</b><br>Value: %{x}<br>Count: %{y}'
-            ))
-            
-            # Líneas estadísticas
-            mean_val = data.mean()
-            median_val = data.median()
-            
-            fig.add_vline(
-                x=mean_val, 
-                line_dash="dash", 
-                line_color="red", 
-                annotation_text=f"Mean: {mean_val:.2f}",
-                annotation_position="top right"
-            )
-            
-            fig.add_vline(
-                x=median_val, 
-                line_dash="dot", 
-                line_color="green", 
-                annotation_text=f"Median: {median_val:.2f}",
-                annotation_position="top left"
-            )
-            
-            fig.update_layout(
-                title=f'Distribution of {col}',
-                xaxis_title=col,
-                yaxis_title='Frequency',
-                showlegend=False,
-                height=400,
-                font=dict(size=11)
-            )
-            
-            figures.append(fig)
+            if col in self.df.columns:
+                data = self.df[col].dropna()
+                
+                fig = go.Figure()
+                
+                # Histograma
+                fig.add_trace(go.Histogram(
+                    x=data,
+                    name=col,
+                    nbinsx=30,
+                    opacity=0.7,
+                    marker_color=self.colors[i % len(self.colors)],
+                    hovertemplate=f'<b>{col}</b><br>Value: %{{x}}<br>Count: %{{y}}'
+                ))
+                
+                # Líneas estadísticas
+                mean_val = data.mean()
+                median_val = data.median()
+                
+                fig.add_vline(
+                    x=mean_val, 
+                    line_dash="dash", 
+                    line_color="red", 
+                    annotation_text=f"Mean: {mean_val:.2f}",
+                    annotation_position="top right"
+                )
+                
+                fig.add_vline(
+                    x=median_val, 
+                    line_dash="dot", 
+                    line_color="green", 
+                    annotation_text=f"Median: {median_val:.2f}",
+                    annotation_position="top left"
+                )
+                
+                fig.update_layout(
+                    title=f'Distribution of {col}',
+                    xaxis_title=col,
+                    yaxis_title='Frequency',
+                    showlegend=False,
+                    height=400,
+                    font=dict(size=11)
+                )
+                
+                figures.append(fig)
         
         return figures
     
@@ -332,7 +327,7 @@ class AdvancedCharts:
                 'Performance Index'
             ],
             specs=[[{"type": "indicator"}, {"type": "indicator"}, {"type": "indicator"}],
-                   [{"type": "pie"}, {"type": "indicator"}, {"type": "indicator"}]
+                   [{"type": "pie"}, {"type": "indicator"}, {"type": "indicator"}]]
         )
         
         # KPIs de población

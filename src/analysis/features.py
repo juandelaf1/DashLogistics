@@ -48,8 +48,8 @@ class FeatureEngineering:
         
         # Features regionales
         region_stats = df.groupby('region')['population'].agg(['mean', 'std']).to_dict('index')
-        df['region_population_mean'] = df['region'].map(region_stats['mean'])
-        df['region_population_std'] = df['region'].map(region_stats['std'])
+        df['region_population_mean'] = df['region'].map(lambda x: region_stats[x]['mean'])
+        df['region_population_std'] = df['region'].map(lambda x: region_stats[x]['std'])
         
         return df
     
