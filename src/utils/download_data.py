@@ -5,8 +5,8 @@ import os
 
 load_dotenv()
 
-RAW_PATH = Path(os.getenv("RAW_DATA_PATH"))
-DATA_URL = os.getenv("DATA_URL")
+RAW_PATH = Path(os.getenv("RAW_DATA_PATH", "data/raw"))
+DATA_URL = os.getenv("DATA_URL", "")
 
 def download_dataset():
     RAW_PATH.parent.mkdir(parents=True, exist_ok=True)
