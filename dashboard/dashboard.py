@@ -1,8 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import os
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
@@ -50,19 +48,13 @@ if df is not None and not df.empty:
         else:
             st.metric("Efficiency", "N/A")
     
-    # Gráfico principal mejorado
+    # Gráfico simple
     st.subheader("📊 Population vs Shipping Rank")
-    fig = px.scatter(df, x="population", y="rank", hover_name="state",
-                    size=df['population_per_rank'] if 'population_per_rank' in df.columns else None,
-                    color="population",
-                    title="Population vs Shipping Rank by State",
-                    labels={"population": "Population", "rank": "Shipping Rank"})
+    fig = px.scatter(df, x="population", y="rank", hover_name="state", 
+                    title="Population vs Shipping Rank by State")
+    st.plotly_chart(fig)
     
-    # Añadir línea de tendencia
-    fig.update_layout(showlegend=True)
-    st.plotly_chart(fig, width='stretch')
-    
-    # Tabs para diferentes análisis
+    # Tabs simples
     tab1, tab2, tab3 = st.tabs(["📈 Analysis", "⛽ Fuel Prices", "📊 Raw Data"])
     
     with tab1:
@@ -71,18 +63,18 @@ if df is not None and not df.empty:
         with col1:
             st.subheader("🏆 Top 10 Most Populous")
             top_pop = df.nlargest(10, 'population')[['state', 'population', 'rank']]
-            st.dataframe(top_pop, width='stretch')
+            st.dataframe(top_pop)
         
         with col2:
             st.subheader("📉 Top 10 Best Rank")
             best_rank = df.nsmallest(10, 'rank')[['state', 'population', 'rank']]
-            st.dataframe(best_rank, width='stretch')
+            st.dataframe(best_rank)
         
-        # Histograma de población
+        # Histograma simple
         st.subheader("Population Distribution")
         fig_hist = px.histogram(df, x="population", nbins=20, 
                               title="Population Distribution Across States")
-        st.plotly_chart(fig_hist, width='stretch')
+        st.plotly_chart(fig_hist)
     
     with tab2:
         if df_fuel is not None and not df_fuel.empty:
@@ -97,20 +89,17 @@ if df is not None and not df.empty:
             with col3:
                 st.metric("Price Range", f"${(df_fuel['regular'].max() - df_fuel['regular'].min()):.2f}")
             
-            # Gráfico de precios
-            fuel_melted = df_fuel.melt(id_vars=['state'], 
-                                     value_vars=['regular', 'mid_grade', 'premium', 'diesel'],
-                                     var_name='fuel_type', value_name='price')
-            
-            fig_fuel = px.bar(fuel_melted.head(30), x='state', y='price', 
-                            color='fuel_type', title="Fuel Prices by State (Top 30)")
-            st.plotly_chart(fig_fuel, width='stretch')
+            # Gráfico de precios simple
+            st.subheader("Fuel Prices by State")
+            fig_fuel = px.bar(df_fuel.head(20), x='state', y='regular', 
+                            title="Regular Fuel Prices (Top 20 States)")
+            st.plotly_chart(fig_fuel)
         else:
             st.warning("⚠️ Fuel price data not available")
     
     with tab3:
         st.subheader("📊 Raw Shipping Data")
-        st.dataframe(df, width='stretch')
+        st.dataframe(df)
         
 else:
     st.error("❌ No data available")
