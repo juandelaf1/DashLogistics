@@ -56,8 +56,8 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
         'VT': 'Burlington', 'WY': 'Cheyenne'
     }
     
-    city = state_cities.get(state_code, state_code)  # Fallback al código del estado
-    
+    city = state_cities.get(state_code, state_code)
+
     url = "http://api.weatherapi.com/v1/current.json"
     params = {
         'key': WEATHERAPI_KEY,
@@ -70,14 +70,11 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
         response.raise_for_status()
         
         data = response.json()
-        
-        # Extraer datos relevantes
         current = data['current']
-        
         
         return {
             'state': state_code,
-            'temperature': current['temp_f'],  # Fahrenheit
+            'temperature': current['temp_f'],
             'condition': current['condition']['text'],
             'humidity': current['humidity'],
             'wind_speed': current['wind_mph'],
@@ -86,7 +83,7 @@ def get_weather_data_weatherapi(state_code: str) -> dict:
         }
         
     except Exception:
-        logger.error(f"Error obteniendo datos de WeatherAPI para {state_code}: {e}")
+        logger.exception(f"Error obteniendo datos de WeatherAPI para {state_code}")
         raise
 
 def get_weather_data_openweather(state_code: str) -> dict:
@@ -96,11 +93,9 @@ def get_weather_data_openweather(state_code: str) -> dict:
     if not OPENWEATHER_KEY:
         raise ValueError("OPENWEATHER_API_KEY no configurada")
     
-    # Coordenadas aproximadas de centros de estados
     state_coords = {
         'CA': (36.7783, -119.4179), 'TX': (31.9686, -99.9018), 'FL': (27.6648, -81.5158),
         'NY': (43.0, -75.0), 'PA': (41.2033, -77.1945), 'IL': (40.6331, -89.3985),
-        # ... añadir más estados según necesites
     }
     
     if state_code not in state_coords:
@@ -114,7 +109,7 @@ def get_weather_data_openweather(state_code: str) -> dict:
         'lat': lat,
         'lon': lon,
         'appid': OPENWEATHER_KEY,
-        'units': 'imperial'  # Fahrenheit
+        'units': 'imperial'
     }
     
     try:
@@ -135,28 +130,25 @@ def get_weather_data_openweather(state_code: str) -> dict:
             'data_source': 'OpenWeather'
         }
         
-    except Exception as e:
-        logger.error(f"Error obteniendo datos de OpenWeather para {state_code}: {e}")
+    except Exception:
+        logger.exception(f"Error obteniendo datos de OpenWeather para {state_code}")
         raise
 
 def get_weather_data():
     """
     Consulta APIs de clima y actualiza la tabla master_shipping_data con datos meteorológicos.
-    Intenta WeatherAPI.com primero, fallback a OpenWeather.
     """
     logger.info("Iniciando consulta de datos meteorológicos...")
     
-    # Verificar qué API está disponible
     if not WEATHERAPI_KEY and not OPENWEATHER_KEY:
-        logger.error("No hay API keys configuradas. Configura WEATHERAPI_KEY o OPENWEATHER_API_KEY")
+        logger.error("No hay API keys configuradas.")
         return
     
     engine = get_engine()
     
     try:
-        # Obtener estados únicos de la tabla principal
         df_states = pd.read_sql("SELECT DISTINCT state FROM shipping_stats", engine)
-    except Exception as e:
+    except Exception:
         logger.exception("Error al leer estados desde shipping_stats")
         return
     
@@ -169,30 +161,27 @@ def get_weather_data():
     
     for state in df_states['state']:
         try:
-            # Intentar WeatherAPI.com primero (mejor servicio)
             if WEATHERAPI_KEY:
                 try:
                     weather_data = get_weather_data_weatherapi(state)
                     weather_results.append(weather_data)
                     logger.info(f"✅ {state}: Datos obtenidos de WeatherAPI.com")
-                    time.sleep(0.5)  # Rate limiting
+                    time.sleep(0.5)
                     continue
                 except Exception as e:
                     logger.warning(f"WeatherAPI falló para {state}: {e}")
             
-            # Fallback a OpenWeather
             if OPENWEATHER_KEY:
                 try:
                     weather_data = get_weather_data_openweather(state)
                     if weather_data:
                         weather_results.append(weather_data)
                         logger.info(f"✅ {state}: Datos obtenidos de OpenWeather (fallback)")
-                        time.sleep(0.5)  # Rate limiting
+                        time.sleep(0.5)
                         continue
                 except Exception as e:
                     logger.warning(f"OpenWeather falló para {state}: {e}")
             
-            # Si ambas fallan
             logger.error(f"❌ {state}: Todas las APIs fallaron")
             failed_states.append(state)
             
@@ -201,22 +190,20 @@ def get_weather_data():
             failed_states.append(state)
     
     if not weather_results:
-        logger.error("No se pudieron obtener datos climáticos de ninguna fuente")
+        logger.error("No se pudieron obtener datos climáticos")
         return
     
-    # Guardar en base de datos
     try:
         df_weather = pd.DataFrame(weather_results)
         df_weather.to_sql('weather_data', engine, if_exists='replace', index=False)
         logger.info(f"✅ {len(weather_results)} registros climáticos guardados en weather_data")
         
-        # Actualizar tabla maestra si existe
         try:
             df_master = pd.read_sql("SELECT * FROM master_shipping_data", engine)
             df_master_updated = pd.merge(
-                df_master, 
-                df_weather, 
-                on='state', 
+                df_master,
+                df_weather,
+                on='state',
                 how='left'
             )
             df_master_updated.to_sql('master_shipping_data', engine, if_exists='replace', index=False)
@@ -227,7 +214,7 @@ def get_weather_data():
         if failed_states:
             logger.warning(f"Estados fallidos: {failed_states}")
             
-    except Exception as e:
+    except Exception:
         logger.exception("Error guardando datos climáticos en la base de datos")
         raise
 
