@@ -1,7 +1,6 @@
 # ruff: noqa: E402
 import logging
 from pathlib import Path
-import sys
 import os
 # Importar funciones directamente para facilitar testing y control de errores
 from src.utils.download_data import download_dataset
