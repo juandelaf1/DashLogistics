@@ -6,7 +6,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ED.svg)](https://docker.com)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-![DashLogistics Banner](https://copilot.microsoft.com/th/id/BCO.41ecb967-dd6c-47b5-931b-b59f26cd1e80.png)
+![DashLogistics Banner](https://copilot.microsoft.com/th/id/BCO.b36c81a5-ec44-4e05-bbd1-e49c43035b21.png)
 
 > **Sistema completo de Business Intelligence para análisis de eficiencia logística y optimización de rutas basado en datos demográficos, climáticos y de combustible.**
 
