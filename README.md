@@ -14,7 +14,7 @@
 
 # 🎯 Project Vision
 
-DashLogistics is a **data analytics platform** designed to explore how different factors such as **population, fuel prices and weather conditions** impact logistics efficiency.
+DashLogistics is a **data analytics platform** designed to explore how different factors such as **population, fuel prices, and weather conditions** impact logistics efficiency.
 
 The project demonstrates an **end-to-end analytics workflow**, including:
 
@@ -29,6 +29,7 @@ The goal is to show how **data can support logistics decision-making and operati
 ---
 
 # 🏗️ System Architecture
+
 
 Data Sources → ETL Pipeline → Database → Analysis & ML → Dashboard
 
@@ -60,30 +61,23 @@ Main components:
 # 🚀 Key Features
 
 ### 📊 Data Pipeline
-
 - Automated **data extraction and transformation**
 - Data validation and cleaning
 - Integration of multiple datasets
 
 ### 🌤️ Data Enrichment
-
-External data sources used to enrich the analysis:
-
 - Fuel price data
 - Weather information
 - Regional demographic data
 
 ### 🤖 Predictive Analysis
-
-Basic predictive modeling to explore relationships between variables such as:
-
-- population density
-- logistics ranking
-- fuel prices
-- weather conditions
+- Explore relationships between:
+  - Population density
+  - Logistics ranking
+  - Fuel prices
+  - Weather conditions
 
 ### 📈 Interactive Dashboard
-
 The dashboard allows users to:
 
 - Explore logistics efficiency KPIs
@@ -95,16 +89,16 @@ The dashboard allows users to:
 
 # 🛠️ Tech Stack
 
-| Component | Technology | Purpose |
-|------------|------------|-----------|
-| **Programming** | Python 3.11 | Data processing |
-| **Data Analysis** | Pandas, NumPy | Data manipulation |
-| **Database** | PostgreSQL | Data storage |
-| **Visualization** | Plotly | Interactive charts |
-| **Dashboard** | Streamlit | Data app |
-| **APIs** | WeatherAPI, OpenWeather | External data |
-| **Web Scraping** | BeautifulSoup | Fuel price data |
-| **Environment** | Docker | Deployment |
+| Component       | Technology                       | Purpose                  |
+|-----------------|---------------------------------|--------------------------|
+| **Programming** | Python 3.11                      | Data processing          |
+| **Data Analysis** | Pandas, NumPy                   | Data manipulation        |
+| **Database**    | PostgreSQL                        | Data storage             |
+| **Visualization** | Plotly                           | Interactive charts       |
+| **Dashboard**   | Streamlit                         | Data app                 |
+| **APIs**        | WeatherAPI, OpenWeather           | External data            |
+| **Web Scraping** | BeautifulSoup                    | Fuel price data          |
+| **Environment** | Docker                            | Deployment               |
 
 ---
 
@@ -123,61 +117,41 @@ The dashboard allows users to:
 ```bash
 git clone https://github.com/juandelaf1/DashLogistics.git
 cd DashLogistics
-
 Create virtual environment
-
 python -m venv venv
 source venv/bin/activate
 
 Windows:
 
 venv\Scripts\activate
-
 Install dependencies
-
 pip install -r requirements.txt
-
 🚀 Running the Project
-Run the ETL pipeline
+
+Run the ETL pipeline:
 
 python main.py
 
-Start the dashboard
+Start the dashboard:
 
 streamlit run dashboard/dashboard.py
 
 Dashboard will be available at:
 
 http://localhost:8501
-
 📊 Dashboard Overview
+
 🏠 Main Dashboard
-
-Logistics efficiency KPIs
-
-Population vs logistics ranking
-
-Top and bottom states by efficiency
+Logistics efficiency KPIs, population vs logistics ranking, top and bottom states by efficiency
 
 📈 Predictive Analysis
-
-Machine learning models
-
-Evaluation metrics
-
-Predictive visualizations
+Machine learning models, evaluation metrics, predictive visualizations
 
 ⛽ Fuel Price Analysis
-
-State-level fuel price comparisons
-
-Impact on logistics efficiency
+State-level fuel price comparisons, impact on logistics efficiency
 
 🌤️ Weather Impact
-
-Weather conditions analysis
-
-Relationship between climate and logistics performance
+Weather conditions analysis, relationship between climate and logistics performance
 
 🧪 Testing
 
@@ -188,9 +162,7 @@ pytest
 With coverage:
 
 pytest --cov=src
-
 📁 Project Structure
-
 DashLogistics/
 ├── src/
 │   ├── etl/
@@ -202,10 +174,7 @@ DashLogistics/
 ├── logs/
 ├── archive/
 └── docker-compose.yml
-
 📈 Key KPIs
-
-Main metrics analyzed in the project:
 
 Logistics efficiency index
 
@@ -216,8 +185,6 @@ Fuel cost efficiency
 Weather impact correlations
 
 🔮 Future Improvements
-
-Potential next steps:
 
 Add more weather and traffic variables
 
@@ -232,18 +199,10 @@ Expand dataset coverage
 👨‍💻 Author
 
 Juan Manuel de la Fuente Larrocca
+Data Analyst — Madrid, Spain
 
-Data Analyst
-Madrid, Spain
+GitHub: https://github.com/juandelaf1
 
-GitHub
-https://github.com/juandelaf1
+LinkedIn: https://linkedin.com/in/juandelafuentelarrocca
 
-LinkedIn
-https://linkedin.com/in/juandelafuentelarrocca
-
-<div align="center">
-
-🚢 DashLogistics — Turning logistics data into actionable insights
-
-</div> ```
+<div align="center"> 🚢 DashLogistics — Turning logistics data into actionable insights </div> ```
