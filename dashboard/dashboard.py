@@ -170,8 +170,14 @@ if df_shipping is not None and not df_shipping.empty:
             for tier in ['Top Tier (Highly Efficient)', 'Mid Tier (Average)', 'Low Tier (Below Average)', 'Bottom Tier (Least Efficient)']:
                 tier_df = df_analysis[df_analysis['efficiency_tier'] == tier]
                 st.write(f"**{tier}**: {len(tier_df)} states")
-                st.write(tier_df[['state', 'efficiency_score', 'efficiency_percentile', 'diesel']].to_string())
-        
+                
+                # Preparar tabla con índice limpio
+                tier_df_display = tier_df[['state', 'efficiency_score', 'efficiency_percentile', 'diesel']].copy()
+                tier_df_display.index = tier_df_display.index + 1  # comienza en 1
+                tier_df_display.index.name = "Rank"
+
+                with st.expander(f"Show {tier} Details"):
+                    st.dataframe(tier_df_display, use_container_width=True)
         with tab2:
             st.subheader("Regional Comparison")
             
