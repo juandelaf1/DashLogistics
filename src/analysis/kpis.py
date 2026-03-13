@@ -216,3 +216,220 @@ class KPIAnalysis:
             insights.append(f"Largest region by population: {max_region}")
         
         return insights
+
+
+# ==============================================================================
+# Pure, reusable KPI calculation functions for logistics operations
+# ==============================================================================
+
+def calculate_fuel_cost_index(df: pd.DataFrame, diesel_col: str = 'diesel') -> pd.Series:
+    """
+    Calculate Fuel Cost Index for each state.
+    
+    Compares each state's diesel price with the national average.
+    Index > 1.0 means diesel is more expensive than average.
+    Index < 1.0 means diesel is cheaper than average.
+    
+    Business meaning: Identifies states with premium/discounted fuel costs.
+    Useful for adjusting logistics rates and cost projections.
+    
+    Formula:
+        fuel_cost_index = diesel_price / mean(diesel_price)
+    
+    Args:
+        df: DataFrame with diesel price column
+        diesel_col: Name of diesel price column (default: 'diesel')
+    
+    Returns:
+        pd.Series with fuel_cost_index values
+    
+    Example:
+        >>> df['fuel_cost_index'] = calculate_fuel_cost_index(df)
+        >>> high_cost = df[df['fuel_cost_index'] > 1.1]  # 10% above average
+    """
+    mean_diesel = df[diesel_col].mean()
+    return df[diesel_col] / mean_diesel
+
+
+def calculate_logistics_demand_score(
+    df: pd.DataFrame,
+    population_col: str = 'population',
+    population_density_col: str = None,
+    land_area_col: str = None
+) -> pd.Series:
+    """
+    Calculate Logistics Demand Score for each state.
+    
+    Proxy metric for logistics demand, combining population size with density.
+    Higher score indicates greater absolute demand for logistics services.
+    
+    Business meaning: Identifies states with high logistics activity potential.
+    Useful for warehouse location selection and service capacity planning.
+    
+    Formula:
+        logistics_demand_score = population * population_density
+    
+    If population_density not provided, approximates using:
+        population_density = population / land_area
+    
+    Args:
+        df: DataFrame with required columns
+        population_col: Name of population column (default: 'population')
+        population_density_col: Name of population density column (optional)
+        land_area_col: Name of land area column (used if density unavailable)
+    
+    Returns:
+        pd.Series with logistics_demand_score values
+    
+    Example:
+        >>> df['logistics_demand_score'] = calculate_logistics_demand_score(df)
+        >>> high_demand = df.nlargest(10, 'logistics_demand_score')
+    """
+    population = df[population_col]
+    
+    if population_density_col and population_density_col in df.columns:
+        # Use provided population density
+        population_density = df[population_density_col]
+    elif land_area_col and land_area_col in df.columns:
+        # Calculate density from land area
+        population_density = population / df[land_area_col]
+    else:
+        # TODO: Integrate land_area data from US Census Bureau or similar source
+        # For now, approximate logistics demand score with population as proxy
+        # In production, this should use actual land area data for state-level calculations
+        population_density = population / 1000  # Simplified approximation
+    
+    return population * population_density
+
+
+def calculate_freight_opportunity_score(
+    df: pd.DataFrame,
+    weights: Dict = None,
+    population_col: str = 'population',
+    population_density_col: str = None,
+    land_area_col: str = None,
+    diesel_col: str = 'diesel'
+) -> pd.Series:
+    """
+    Calculate Freight Opportunity Score for each state.
+    
+    Composite metric estimating logistics expansion potential.
+    Combines normalized population, population density, and inverted diesel costs.
+    Score scaled between 0–100 for easy interpretation.
+    
+    Business meaning: Identifies high-potential markets for logistics expansion.
+    States with higher scores have favorable demographics + lower fuel costs.
+    
+    Formula:
+        freight_opportunity_score = 
+          0.4 * normalized_population +
+          0.3 * normalized_population_density +
+          0.3 * inverse_diesel_price
+        
+        Scaled to 0-100 range
+    
+    Args:
+        df: DataFrame with required columns
+        weights: Dict with keys 'population', 'density', 'fuel_cost' (optional)
+                Default: {'population': 0.4, 'density': 0.3, 'fuel_cost': 0.3}
+        population_col: Name of population column (default: 'population')
+        population_density_col: Name of population density column (optional)
+        land_area_col: Name of land area column (used if density unavailable)
+        diesel_col: Name of diesel price column (default: 'diesel')
+    
+    Returns:
+        pd.Series with freight_opportunity_score values (0-100)
+    
+    Example:
+        >>> df['freight_opportunity_score'] = calculate_freight_opportunity_score(df)
+        >>> best_opportunities = df.nlargest(5, 'freight_opportunity_score')
+    """
+    if weights is None:
+        weights = {
+            'population': 0.4,
+            'density': 0.3,
+            'fuel_cost': 0.3
+        }
+    
+    # Normalize population (min-max scaling to 0-1)
+    population = df[population_col]
+    pop_min = population.min()
+    pop_max = population.max()
+    normalized_population = (population - pop_min) / (pop_max - pop_min) if pop_max > pop_min else population / pop_max
+    
+    # Calculate or get population density
+    if population_density_col and population_density_col in df.columns:
+        population_density = df[population_density_col]
+    elif land_area_col and land_area_col in df.columns:
+        population_density = population / df[land_area_col]
+    else:
+        # TODO: Integrate land_area data from US Census Bureau
+        population_density = population / 1000  # Simplified approximation
+    
+    # Normalize density (min-max scaling to 0-1)
+    density_min = population_density.min()
+    density_max = population_density.max()
+    normalized_density = (population_density - density_min) / (density_max - density_min) if density_max > density_min else population_density / density_max
+    
+    # Invert diesel prices (lower price = higher score)
+    diesel_prices = df[diesel_col]
+    diesel_max = diesel_prices.max()
+    inverted_diesel = (diesel_max - diesel_prices) / (diesel_max - diesel_prices.min()) if diesel_max > diesel_prices.min() else (diesel_max - diesel_prices) / diesel_max
+    
+    # Calculate composite score
+    composite_score = (
+        weights['population'] * normalized_population +
+        weights['density'] * normalized_density +
+        weights['fuel_cost'] * inverted_diesel
+    )
+    
+    # Scale to 0-100
+    return composite_score * 100
+
+
+def calculate_cost_efficiency_index(
+    df: pd.DataFrame,
+    population_col: str = 'population',
+    population_density_col: str = None,
+    land_area_col: str = None,
+    diesel_col: str = 'diesel'
+) -> pd.Series:
+    """
+    Calculate Cost Efficiency Index for each state.
+    
+    Composite metric measuring logistics market efficiency.
+    Ratio of logistics demand (population × density) to diesel cost.
+    Higher value indicates better logistics market efficiency.
+    
+    Business meaning: Markets where high demand is served with lower fuel costs.
+    Useful for identifying optimal locations for cost-efficient operations.
+    
+    Formula:
+        cost_efficiency_index = logistics_demand_score / diesel_price
+    
+    Args:
+        df: DataFrame with required columns
+        population_col: Name of population column (default: 'population')
+        population_density_col: Name of population density column (optional)
+        land_area_col: Name of land area column (used if density unavailable)
+        diesel_col: Name of diesel price column (default: 'diesel')
+    
+    Returns:
+        pd.Series with cost_efficiency_index values
+    
+    Example:
+        >>> df['cost_efficiency_index'] = calculate_cost_efficiency_index(df)
+        >>> efficient_markets = df.nlargest(10, 'cost_efficiency_index')
+        >>> print(f"Cost efficiency range: {df['cost_efficiency_index'].min():.2f} - {df['cost_efficiency_index'].max():.2f}")
+    """
+    demand_score = calculate_logistics_demand_score(
+        df,
+        population_col=population_col,
+        population_density_col=population_density_col,
+        land_area_col=land_area_col
+    )
+    
+    diesel_prices = df[diesel_col]
+    
+    # Avoid division by zero
+    return demand_score / diesel_prices.replace(0, np.nan)

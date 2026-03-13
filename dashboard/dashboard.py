@@ -3,9 +3,12 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+import sys
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
+
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 load_dotenv()
 
@@ -34,6 +37,48 @@ def get_analysis_data():
             return pd.read_csv(analysis_path)
     except Exception as e:
         st.warning(f"Could not load analysis data: {e}")
+    return None
+
+@st.cache_data(ttl=300)
+def get_kpi_data():
+    """Load data with advanced logistics KPIs calculated."""
+    try:
+        from src.analysis.kpis import (
+            calculate_fuel_cost_index,
+            calculate_logistics_demand_score,
+            calculate_freight_opportunity_score,
+            calculate_cost_efficiency_index
+        )
+        
+        # Load enriched base data
+        enriched_path = Path("data/final/enriched_data.csv")
+        if enriched_path.exists():
+            df = pd.read_csv(enriched_path)
+            
+            # Calculate KPIs
+            df['fuel_cost_index'] = calculate_fuel_cost_index(df)
+            df['logistics_demand_score'] = calculate_logistics_demand_score(df)
+            df['freight_opportunity_score'] = calculate_freight_opportunity_score(df)
+            df['cost_efficiency_index'] = calculate_cost_efficiency_index(df)
+            
+            # Add region information
+            REGIONS = {
+                'Northeast': ['CT', 'ME', 'MA', 'NH', 'RI', 'VT', 'NJ', 'NY', 'PA'],
+                'South': ['DE', 'FL', 'GA', 'MD', 'NC', 'SC', 'VA', 'WV', 'AL', 'KY', 'MS', 'TN', 'AR', 'LA', 'OK', 'TX'],
+                'Midwest': ['IL', 'IN', 'MI', 'OH', 'WI', 'IA', 'KS', 'MN', 'MO', 'NE', 'ND', 'SD'],
+                'West': ['AZ', 'CO', 'ID', 'MT', 'NV', 'NM', 'UT', 'WY', 'AK', 'CA', 'HI', 'OR', 'WA']
+            }
+            
+            def assign_region(state):
+                for region, states in REGIONS.items():
+                    if state in states:
+                        return region
+                return 'Other'
+            
+            df['region'] = df['state'].apply(assign_region)
+            return df
+    except Exception as e:
+        st.warning(f"Could not load KPI data: {e}")
     return None
 
 # ----------------------------
@@ -172,6 +217,160 @@ if df_shipping is not None and not df_shipping.empty:
             corr_data = df_analysis[['population', 'regular', 'diesel', 'efficiency_score']].corr()
             fig_corr = px.imshow(corr_data, text_auto=True, title="Variable Correlations")
             st.plotly_chart(fig_corr, use_container_width=True)
+    
+    # ----------------------------
+    # Advanced Logistics KPIs Section
+    # ----------------------------
+    df_kpis = get_kpi_data()
+    
+    if df_kpis is not None and not df_kpis.empty:
+        st.header("🚀 Advanced Logistics KPIs")
+        
+        # Create KPI tabs
+        kpi_tab1, kpi_tab2, kpi_tab3, kpi_tab4 = st.tabs([
+            "Freight Opportunity", 
+            "Top 10 States", 
+            "Demand vs Cost", 
+            "Regional Efficiency"
+        ])
+        
+        with kpi_tab1:
+            st.subheader("Freight Opportunity Score - USA Choropleth Map")
+            st.markdown("Composite metric showing logistics expansion potential (higher = better opportunity)")
+            
+            # Prepare data for choropleth
+            fig_choropleth = px.choropleth(
+                df_kpis,
+                locations='state',
+                locationmode='USA-states',
+                color='freight_opportunity_score',
+                scope='usa',
+                color_continuous_scale='RdYlGn',
+                title='Freight Opportunity Score by State (0-100)',
+                hover_data={
+                    'state': True,
+                    'freight_opportunity_score': ':.1f',
+                    'population': ':,.0f',
+                    'diesel': ':.3f',
+                    'region': True
+                }
+            )
+            fig_choropleth.update_geos(showstate=True, resolution=50)
+            st.plotly_chart(fig_choropleth, use_container_width=True)
+            
+            # Summary statistics
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("Highest Score", f"{df_kpis['freight_opportunity_score'].max():.1f}", 
+                         df_kpis[df_kpis['freight_opportunity_score'] == df_kpis['freight_opportunity_score'].max()]['state'].values[0])
+            with col2:
+                st.metric("Lowest Score", f"{df_kpis['freight_opportunity_score'].min():.1f}",
+                         df_kpis[df_kpis['freight_opportunity_score'] == df_kpis['freight_opportunity_score'].min()]['state'].values[0])
+            with col3:
+                st.metric("Average Score", f"{df_kpis['freight_opportunity_score'].mean():.1f}")
+            with col4:
+                st.metric("Std Deviation", f"{df_kpis['freight_opportunity_score'].std():.1f}")
+        
+        with kpi_tab2:
+            st.subheader("Top 10 Logistics States - Freight Opportunity Score")
+            
+            top_10_states = df_kpis.nlargest(10, 'freight_opportunity_score')[
+                ['state', 'freight_opportunity_score', 'population', 'diesel', 'region']
+            ].reset_index(drop=True)
+            
+            fig_top10 = px.bar(
+                top_10_states,
+                x='freight_opportunity_score',
+                y='state',
+                orientation='h',
+                color='freight_opportunity_score',
+                color_continuous_scale='RdYlGn',
+                title='Top 10 States by Freight Opportunity Score',
+                hover_data={
+                    'population': ':,.0f',
+                    'diesel': ':.3f',
+                    'region': True
+                },
+                labels={'freight_opportunity_score': 'Score (0-100)', 'state': 'State'}
+            )
+            fig_top10.update_layout(showlegend=False, height=500)
+            st.plotly_chart(fig_top10, use_container_width=True)
+            
+            # Display table
+            st.dataframe(top_10_states, use_container_width=True, hide_index=True)
+        
+        with kpi_tab3:
+            st.subheader("Diesel Price vs Logistics Demand Score - Regional Comparison")
+            st.markdown("Shows market demand against fuel costs by region")
+            
+            fig_scatter_demand = px.scatter(
+                df_kpis,
+                x='diesel',
+                y='logistics_demand_score',
+                size='freight_opportunity_score',
+                color='region',
+                hover_name='state',
+                title='Diesel Price vs Logistics Demand Score (Size=Opportunity)',
+                labels={
+                    'diesel': 'Diesel Price (USD/gal)',
+                    'logistics_demand_score': 'Logistics Demand Score'
+                },
+                color_discrete_map={
+                    'Northeast': '#1f77b4',
+                    'South': '#ff7f0e',
+                    'Midwest': '#2ca02c',
+                    'West': '#d62728'
+                }
+            )
+            fig_scatter_demand.update_traces(marker=dict(size=10, opacity=0.7))
+            st.plotly_chart(fig_scatter_demand, use_container_width=True)
+            
+            # Correlation analysis
+            corr_value = df_kpis['diesel'].corr(df_kpis['logistics_demand_score'])
+            st.info(f"📊 Correlation between Diesel Price and Logistics Demand: **{corr_value:.3f}**")
+        
+        with kpi_tab4:
+            st.subheader("Cost Efficiency Index by Region")
+            st.markdown("Compares logistics demand relative to fuel costs by region")
+            
+            # Calculate regional cost efficiency
+            regional_efficiency = df_kpis.groupby('region').agg({
+                'cost_efficiency_index': 'mean',
+                'fuel_cost_index': 'mean',
+                'logistics_demand_score': 'mean',
+                'state': 'count'
+            }).rename(columns={'state': 'count'}).reset_index()
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                fig_regional_bar = px.bar(
+                    regional_efficiency,
+                    x='region',
+                    y='cost_efficiency_index',
+                    color='cost_efficiency_index',
+                    color_continuous_scale='Viridis',
+                    title='Average Cost Efficiency Index by Region',
+                    labels={'cost_efficiency_index': 'Cost Efficiency Index', 'region': 'Region'}
+                )
+                st.plotly_chart(fig_regional_bar, use_container_width=True)
+            
+            with col2:
+                fig_fuel_idx = px.bar(
+                    regional_efficiency,
+                    x='region',
+                    y='fuel_cost_index',
+                    color='fuel_cost_index',
+                    color_continuous_scale='RdYlGn_r',
+                    title='Average Fuel Cost Index by Region',
+                    labels={'fuel_cost_index': 'Fuel Cost Index (1.0=National Avg)', 'region': 'Region'}
+                )
+                fig_fuel_idx.add_hline(y=1.0, line_dash="dash", line_color="red", 
+                                      annotation_text="National Average")
+                st.plotly_chart(fig_fuel_idx, use_container_width=True)
+            
+            # Regional details table
+            st.dataframe(regional_efficiency, use_container_width=True, hide_index=True)
     
     # ----------------------------
     st.header("📊 Key Metrics")
