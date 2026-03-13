@@ -11,7 +11,9 @@ class KPIAnalysis:
         self.df_fuel = df_fuel.copy() if df_fuel is not None else None
     
     def basic_kpis(self) -> Dict:
-        """KPIs básicos del dataset"""
+        if self.df_shipping.empty or 'population' not in self.df_shipping.columns:
+            return {}
+        
         return {
             'total_states': len(self.df_shipping),
             'total_population': self.df_shipping['population'].sum(),
@@ -22,19 +24,17 @@ class KPIAnalysis:
             'median_rank': self.df_shipping['rank'].median(),
             'rank_std': self.df_shipping['rank'].std()
         }
-    
+        
     def efficiency_kpis(self) -> Dict:
-        """KPIs de eficiencia"""
         df = self.df_shipping.copy()
-        
-        # Métricas de eficiencia
         df['population_per_rank'] = df['population'] / df['rank']
-        df['rank_per_million_population'] = (df['rank'] / (df['population'] / 1000000))
-        
+        df['rank_per_million_population'] = (df['rank'] / (df['population'] / 1_000_000))
+
         return {
             'max_efficiency': df['population_per_rank'].max(),
             'min_efficiency': df['population_per_rank'].min(),
             'avg_efficiency': df['population_per_rank'].mean(),
+            'avg_efficiency_score': df['population_per_rank'].mean(),  
             'efficiency_std': df['population_per_rank'].std(),
             'best_rank_per_million': df['rank_per_million_population'].min(),
             'worst_rank_per_million': df['rank_per_million_population'].max()
