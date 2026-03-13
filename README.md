@@ -3,7 +3,8 @@
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.50+-red.svg)](https://streamlit.io)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue.svg)](https://postgresql.org)
-[![Tests](https://img.shields.io/badge/Tests-5%2F5-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/Tests-3%2F3-brightgreen.svg)](tests/)
+[![Status](https://img.shields.io/badge/Status-MVP-orange.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 <h3 align="center">
@@ -48,16 +49,19 @@
 
 ## ✅ What's Included
 
-**MVP Status**: Fully functional end-to-end pipeline ✅
+**MVP Status**: Production-ready analytics pipeline ✅
 
-- ✅ **ETL Pipeline**: Load → Clean → Validate → Normalize → Enrich
-- ✅ **Data Sources**: Demographics CSV + AAA fuel prices (real-time)
-- ✅ **State Mapper**: Centralized US state code normalization
-- ✅ **CSV Export**: Analysis-ready data (data/final/enriched_data.csv)
-- ✅ **PostgreSQL**: 4 tables (shipping_stats, fuel_prices, weather_data, master)
-- ✅ **Streamlit Dashboard**: Interactive visualizations
-- ✅ **Tests**: 5/5 passing
-- ⏳ **Weather API**: Optional (requires WEATHERAPI_KEY in .env)
+- ✅ **ETL Pipeline**: Load → Clean → Validate → Normalize → Enrich (50/50 states, ~5s execution)
+- ✅ **Data Sources**: Demographics CSV + AAA fuel prices (real-time web scraping)
+- ✅ **State Mapper**: Centralized state code normalization (`src/utils/state_mapper.py`)
+- ✅ **CSV Exports**: 
+  - `enriched_data.csv` (50 rows × 10 cols: shipping + fuel)
+  - `logistics_analysis_enriched.csv` (50 rows × 12 cols: includes efficiency scores)
+- ✅ **PostgreSQL**: shipping_stats + fuel_prices tables with audit trail (run_id tracking)
+- ✅ **Jupyter Analysis**: Complete notebook (9 sections, 23 cells, 6+ visualizations)
+- ✅ **Tests**: 3/3 core tests passing (ETL, scrapers, data validation)
+- 🎯 **Efficiency Tiers**: States ranked by population/fuel cost ratio in 4 tiers
+- ⏳ **Weather API**: Optional (graceful degradation if unavailable)
 
 ---
 
@@ -83,9 +87,20 @@ Raw Data (52 states)  →  ETL  →  Enrichment  →  Final Dataset  →  Dashbo
 - ✅ **Error Resilience**: Optional features don't break core pipeline
 - ✅ **Audit Trail**: UUID-tracked execution lineage
 
-**Dashboard**
+**Analysis & Insights**
 
-- Streamlit + Plotly visualizations
+- 📊 **Jupyter Notebook** (`notebooks/01_LOGISTICS_ANALYSIS_REPORT.ipynb`):
+  - Fuel price analysis: regional trends, Top/Bottom states, price spreads
+  - Population demographics: correlation analysis (0.48 with diesel prices)
+  - Efficiency metrics: 4-tier classification (Top/Mid/Low/Bottom performers)
+  - Regional breakdown: Northeast/South/Midwest/West comparisons
+  - Executive summary: 6 actionable recommendations for logistics optimization
+  - Output: `logistics_analysis_enriched.csv` with efficiency scores & tiers
+
+- 📈 **Streamlit Dashboard** (`dashboard/dashboard.py`): 
+  - Real-time KPIs and interactive Plotly visualizations
+  - Geographic choropleth maps
+  - Drill-down filtering and correlation analysis charts
 
 ---
 

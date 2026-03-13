@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import os
+from pathlib import Path
 from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
@@ -23,6 +24,17 @@ def get_data():
     except Exception as e:
         st.error(f"Database error: {e}")
         return None, None
+
+@st.cache_data(ttl=300)
+def get_analysis_data():
+    """Load enriched analysis data with efficiency scores."""
+    try:
+        analysis_path = Path("data/final/logistics_analysis_enriched.csv")
+        if analysis_path.exists():
+            return pd.read_csv(analysis_path)
+    except Exception as e:
+        st.warning(f"Could not load analysis data: {e}")
+    return None
 
 # ----------------------------
 # Título
@@ -68,7 +80,99 @@ if df_shipping is not None and not df_shipping.empty:
     ]
 
     # ----------------------------
-    # KPIs clave
+    # Analysis Data Section (if available)
+    # ----------------------------
+    df_analysis = get_analysis_data()
+    
+    if df_analysis is not None:
+        st.header("📈 Advanced Analytics")
+        
+        # Create analysis tabs
+        tab1, tab2, tab3 = st.tabs(["Efficiency Tiers", "Regional Analysis", "Detailed Metrics"])
+        
+        with tab1:
+            st.subheader("State Efficiency Classification")
+            
+            # Efficiency tier distribution
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                tier_counts = df_analysis['efficiency_tier'].value_counts()
+                fig_tiers = px.pie(
+                    values=tier_counts.values,
+                    names=tier_counts.index,
+                    title="States by Efficiency Tier",
+                    color_discrete_map={
+                        'Top Tier (Highly Efficient)': '#2ECC71',
+                        'Mid Tier (Average)': '#F1C40F',
+                        'Low Tier (Below Average)': '#E67E22',
+                        'Bottom Tier (Least Efficient)': '#E74C3C'
+                    }
+                )
+                st.plotly_chart(fig_tiers, use_container_width=True)
+            
+            with col2:
+                st.markdown("### What do tiers mean?")
+                st.markdown("""
+                - **Top Tier (Green)**: Highly efficient for logistics - low fuel costs per capita
+                - **Mid Tier (Yellow)**: Average efficiency - balanced operations
+                - **Low Tier (Orange)**: Below average - operational challenges
+                - **Bottom Tier (Red)**: Least efficient - highest fuel burdens
+                """)
+            
+            # Show tier details
+            st.markdown("### Tier Breakdown")
+            for tier in ['Top Tier (Highly Efficient)', 'Mid Tier (Average)', 'Low Tier (Below Average)', 'Bottom Tier (Least Efficient)']:
+                tier_df = df_analysis[df_analysis['efficiency_tier'] == tier]
+                st.write(f"**{tier}**: {len(tier_df)} states")
+                st.write(tier_df[['state', 'efficiency_score', 'efficiency_percentile', 'diesel']].to_string())
+        
+        with tab2:
+            st.subheader("Regional Comparison")
+            
+            # Regional statistics
+            regional_stats = df_analysis.groupby('region').agg({
+                'diesel': 'mean',
+                'regular': 'mean',
+                'efficiency_score': 'mean',
+                'state': 'count'
+            }).rename(columns={'state': 'count'})
+            
+            st.dataframe(regional_stats, use_container_width=True)
+            
+            # Regional visualization
+            fig_regional = px.bar(
+                df_analysis.groupby('region')['efficiency_score'].mean().reset_index(),
+                x='region',
+                y='efficiency_score',
+                title="Average Efficiency Score by Region",
+                color='efficiency_score',
+                color_continuous_scale='Viridis'
+            )
+            st.plotly_chart(fig_regional, use_container_width=True)
+        
+        with tab3:
+            st.subheader("Detailed Metrics")
+            
+            # Display top and bottom states
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("### Top 10 Most Efficient States")
+                top_10 = df_analysis.nlargest(10, 'efficiency_score')[['state', 'efficiency_score', 'population', 'diesel']]
+                st.dataframe(top_10, use_container_width=True)
+            
+            with col2:
+                st.markdown("### Top 10 Least Efficient States")
+                bottom_10 = df_analysis.nsmallest(10, 'efficiency_score')[['state', 'efficiency_score', 'population', 'diesel']]
+                st.dataframe(bottom_10, use_container_width=True)
+            
+            # Correlation plot
+            st.markdown("### Key Correlations")
+            corr_data = df_analysis[['population', 'regular', 'diesel', 'efficiency_score']].corr()
+            fig_corr = px.imshow(corr_data, text_auto=True, title="Variable Correlations")
+            st.plotly_chart(fig_corr, use_container_width=True)
+    
     # ----------------------------
     st.header("📊 Key Metrics")
     col1, col2, col3, col4, col5, col6 = st.columns(6)

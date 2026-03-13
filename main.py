@@ -15,6 +15,8 @@ from src.etl.etl import run_etl
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
 from src.etl.enrichment.weather_api import get_weather_data
 from src.database import get_engine
+from src.analysis.kpis import KPIAnalysis
+from src.analysis.features import FeatureEngineering
 
 # Setup
 RUN_ID = os.getenv("PIPELINE_RUN_ID") or uuid.uuid4().hex
@@ -96,6 +98,50 @@ def create_enriched_dataset():
         
         df_final.to_csv(output_path, index=False)
         logger.info(f"✅ Enriched dataset saved: {output_path} ({df_final.shape[0]} rows, {df_final.shape[1]} cols)")
+        
+        # === CALCULATE KPIs AND FEATURES ===
+        try:
+            logger.info("▶ Calculating KPIs and Feature layers...")
+            
+            # Initialize KPI analyzer
+            kpi_analyzer = KPIAnalysis(df_final, df_fuel if 'df_fuel' in locals() else None)
+            
+            # Calculate basic KPIs
+            basic_kpis = kpi_analyzer.basic_kpis()
+            logger.info(f"  • Basic KPIs: {len(basic_kpis)} metrics")
+            
+            # Calculate efficiency KPIs
+            efficiency_kpis = kpi_analyzer.efficiency_kpis()
+            logger.info(f"  • Efficiency KPIs: {len(efficiency_kpis)} metrics")
+            
+            # Create KPI summary DataFrame
+            kpi_summary = pd.DataFrame({
+                'metric': list(basic_kpis.keys()) + list(efficiency_kpis.keys()),
+                'value': list(basic_kpis.values()) + list(efficiency_kpis.values())
+            })
+            
+            kpi_path = output_dir / "kpi_summary.csv"
+            kpi_summary.to_csv(kpi_path, index=False)
+            logger.info(f"✅ KPI summary saved: {kpi_path}")
+            
+            # === FEATURE ENGINEERING ===
+            feature_engineer = FeatureEngineering(df_final)
+            
+            # Create basic features
+            df_with_features = feature_engineer.create_basic_features()
+            logger.info("  • Basic features created (efficiency scores, log transforms)")
+            
+            # Create regional features
+            df_with_features = feature_engineer.create_regional_features()
+            logger.info("  • Regional features created")
+            
+            # Save enhanced dataset with all features
+            features_path = output_dir / "enriched_data_with_features.csv"
+            df_with_features.to_csv(features_path, index=False)
+            logger.info(f"✅ Enhanced dataset with features saved: {features_path} ({df_with_features.shape[0]} rows, {df_with_features.shape[1]} cols)")
+            
+        except Exception as e:
+            logger.warning(f"⚠️ KPI/Feature calculation warning (non-critical): {e}")
         
         return df_final
     
