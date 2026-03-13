@@ -255,7 +255,7 @@ if df_shipping is not None and not df_shipping.empty:
                     'region': True
                 }
             )
-            fig_choropleth.update_geos(showstate=True, resolution=50)
+            fig_choropleth.update_geos(showsubunits=True, resolution=50)
             st.plotly_chart(fig_choropleth, use_container_width=True)
             
             # Summary statistics
