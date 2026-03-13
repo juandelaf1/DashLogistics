@@ -8,6 +8,7 @@ import pandas as pd
 from pydantic import BaseModel, Field, field_validator, ValidationError
 
 from src.database import get_engine
+from src.utils.state_mapper import normalize_state_code
 
 load_dotenv()
 
@@ -25,14 +26,15 @@ logger = logging.getLogger(__name__)
 # Esquema de validación
 class ShippingDataSchema(BaseModel):
     rank: int = Field(ge=1)
-    state: str
+    state: str = Field(min_length=2, max_length=2)  # Código de estado (CA, NY, etc)
     postal: str = Field(min_length=2, max_length=2)
     population: float = Field(gt=0)
 
     @field_validator("state")
     @classmethod
-    def state_to_upper(cls, v):
-        return v.strip().upper()
+    def state_to_code(cls, v):
+        """Normaliza estado a código de 2 letras."""
+        return normalize_state_code(v)
 
 # Funciones ETL
 def load_data():
@@ -51,9 +53,30 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df.columns = df.columns.str.lower().str.replace(" ", "_")
     # Trim strings
     df = df.apply(lambda col: col.str.strip() if col.dtype == "object" else col)
+    
+    # PRE-NORMALIZAR estado si viene como nombre completo
+    def normalize_state_safe(x):
+        try:
+            state_str = str(x).strip()
+            if len(state_str) > 2:
+                return normalize_state_code(state_str)
+            else:
+                return state_str.upper()
+        except ValueError:
+            return None  # Descartar si no es un estado válido
+    
+    if "state" in df.columns:
+        df["state"] = df["state"].apply(normalize_state_safe)
+    
     valid_rows = []
     invalid_count = 0
     for index, row in df.iterrows():
+        # Saltar filas con estado None (no válidas)
+        if row.get("state") is None:
+            invalid_count += 1
+            logger.warning(f"Fila {index} descartada: Estado inválido '{row.get('state')}'")
+            continue
+            
         try:
             validated = ShippingDataSchema(**row.to_dict())
             valid_rows.append(validated.model_dump())
@@ -68,7 +91,8 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
         df_clean["population_per_rank"] = df_clean["population"] / df_clean["rank"]
         logger.info("Columna population_per_rank creada")
     df_clean = df_clean.drop_duplicates()
-    df_clean = df_clean.dropna(subset=["state"])
+    if "state" in df_clean.columns:
+        df_clean = df_clean.dropna(subset=["state"])
     if "population" in df_clean.columns:
         df_clean = df_clean.sort_values(by="population", ascending=False)
     logger.info(f"Limpieza completada. Filas finales: {len(df_clean)}")

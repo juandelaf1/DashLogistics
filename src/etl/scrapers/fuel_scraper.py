@@ -7,6 +7,7 @@ import os
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from pathlib import Path
 from src.database import get_engine
+from src.utils.state_mapper import normalize_state_code
 
 URL = "https://gasprices.aaa.com/state-gas-price-averages/"
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(__name__)
 
 class FuelPriceSchema(BaseModel):
-    state: str
+    state: str = Field(min_length=2, max_length=2)  # Código de estado (CA, NY, etc)
     regular: float = Field(gt=0)
     mid_grade: float = Field(gt=0)
     premium: float = Field(gt=0)
@@ -25,8 +26,9 @@ class FuelPriceSchema(BaseModel):
 
     @field_validator('state')
     @classmethod
-    def clean_state(cls, v):
-        return v.strip().upper()
+    def state_to_code(cls, v):
+        """Normaliza estado a código de 2 letras (CA, NY, etc)."""
+        return normalize_state_code(v)
 
 def scrape_fuel_prices():
     """
@@ -76,7 +78,15 @@ def scrape_fuel_prices():
             try:
                 # Limpiar valores numéricos
                 cleaned_row = {}
-                cleaned_row['state'] = str(row.iloc[0]).strip().upper()
+                
+                # NORMALIZAR ESTADO a código de 2 letras
+                state_raw = str(row.iloc[0]).strip().upper()
+                try:
+                    cleaned_row['state'] = normalize_state_code(state_raw)
+                except ValueError as e:
+                    logger.warning(f"Fila {index}: Estado inválido '{state_raw}': {e}")
+                    invalid_count += 1
+                    continue
                 
                 for col in ['regular', 'mid_grade', 'premium', 'diesel']:
                     if col in expected_cols:
