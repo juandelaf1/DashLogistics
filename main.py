@@ -9,6 +9,25 @@ import os
 import uuid
 import pandas as pd
 
+# === CLASES NECESARIAS PARA TESTS ===
+class RunIdFormatter(logging.Formatter):
+    """Formatter que agrega un run_id único a cada log record."""
+    def format(self, record):
+        if not hasattr(record, "run_id"):
+            record.run_id = os.getenv("PIPELINE_RUN_ID") or str(uuid.uuid4())[:8]
+        return super().format(record)
+
+
+class RunIdFilter(logging.Filter):
+    """Filter que inyecta un run_id fijo en cada log record."""
+    def __init__(self, run_id):
+        super().__init__()
+        self.run_id = run_id
+
+    def filter(self, record):
+        record.run_id = self.run_id
+        return True
+
 # Core functions
 from src.utils.download_data import download_dataset
 from src.etl.etl import run_etl
