@@ -34,6 +34,9 @@ from src.etl.etl import run_etl
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
 from src.etl.enrichment.weather_api import get_weather_data
 from src.etl.enrichment.eia_api import fetch_fuel_prices
+from src.etl.enrichment.faf_loader import store_freight_data
+from src.etl.enrichment.usda_rates import store_usda_rates
+from src.analysis.cost_estimator import build_cost_features
 from src.database import get_engine, read_sql_query
 from src.analysis.kpis import KPIAnalysis
 from src.analysis.features import FeatureEngineering
@@ -210,6 +213,36 @@ def run_pipeline():
         # 5. Crear dataset final
         logger.info("▶ Step 5: Creating final enriched dataset...")
         create_enriched_dataset()
+        
+        # 6. FAF Freight Data
+        logger.info("▶ Step 6: Loading FAF freight flows...")
+        try:
+            engine = get_engine()
+            faf_result = store_freight_data(engine)
+            logger.info(f"✅ FAF: {faf_result['state_rows']} states, {faf_result['lane_rows']} lanes, "
+                        f"{faf_result['total_tons']:,.0f}M tons, ${faf_result['total_value']:,.0f}B value")
+        except Exception as e:
+            logger.warning(f"FAF loading failed (non-critical): {e}")
+        
+        # 7. USDA Truck Rates
+        logger.info("▶ Step 7: Fetching USDA truck rates...")
+        try:
+            engine = get_engine()
+            usda_count = store_usda_rates(engine)
+            logger.info(f"✅ USDA: {usda_count} rate records loaded")
+        except Exception as e:
+            logger.warning(f"USDA rates failed (non-critical): {e}")
+        
+        # 8. Cost estimation & congestion proxy
+        logger.info("▶ Step 8: Computing cost estimates & congestion...")
+        try:
+            engine = get_engine()
+            cost_results = build_cost_features(engine)
+            logger.info(f"✅ Costs: {cost_results['routes']} routes, "
+                        f"{cost_results['high_congestion']} high congestion, "
+                        f"avg ${cost_results['avg_cost_per_mi']:.2f}/mi")
+        except Exception as e:
+            logger.warning(f"Cost estimation failed (non-critical): {e}")
         
         logger.info("=" * 60)
         logger.info("✅ PIPELINE COMPLETED SUCCESSFULLY")

@@ -9,7 +9,7 @@ import requests
 from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
-from src.database import get_engine, write_df_to_sql, read_sql_query
+from src.database import get_engine, write_df_to_sql
 
 load_dotenv()
 

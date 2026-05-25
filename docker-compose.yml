@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  dashlogistics:
+    build:
+      context: .
+      args:
+        OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY:-}
+        EIA_API_KEY: ${EIA_API_KEY:-}
+    container_name: dashlogistics
+    ports:
+      - "8502:8502"
+    volumes:
+      - dashlogistics_data:/app/data
+    env_file:
+      - .env
+    restart: unless-stopped
+
+volumes:
+  dashlogistics_data:

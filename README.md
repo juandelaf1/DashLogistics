@@ -1,157 +1,193 @@
-# 🚢 DashLogistics — Logistics Intelligence Pipeline
+# DashLogistics — US Freight Intelligence
 
-[![CI](https://img.shields.io/github/actions/workflow/status/juandelaf1/DashLogistics/ci.yml?branch=master&label=CI&logo=github)](https://github.com/juandelaf1/DashLogistics/actions)
-[![Python](https://img.shields.io/badge/Python-3.13-blue?logo=python)](https://python.org)
-[![Tests](https://img.shields.io/badge/Tests-17%2F17-brightgreen)](tests/)
+[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-red?logo=streamlit)](https://streamlit.io)
-[![Pandas](https://img.shields.io/badge/Pandas-3.x-blue?logo=pandas)](https://pandas.pydata.org)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://docker.com)
+[![Data](https://img.shields.io/badge/Data-FAF%205.7.1%20|%20USDA%20|%20AAA%20|%20EIA-lightgrey)](https://www.bts.gov/faf)
 
-> End-to-end ETL pipeline that transforms public logistics data into business intelligence: demographics, fuel prices, and weather — enriched with KPIs, interactive maps, and a live dashboard.
+> End-to-end logistics intelligence platform. Real public data — BTS FAF freight flows, USDA truck rates, AAA/EIA fuel prices — transformed into interactive maps, cost models, and congestion analytics.
 
 ---
 
 ## Dashboard Preview
 
-| Population | Efficiency | Fuel |
-|:---:|:---:|:---:|
-| ![Population](docs/images/population_map.png) | ![Efficiency](docs/images/efficiency_map.png) | ![Diesel](docs/images/diesel_map.png) |
-| **Freight Opportunity** | **Demand vs Cost** | **Correlations** |
-| ![Freight Opportunity](docs/images/freight_opportunity_map.png) | ![Demand vs Cost](docs/images/demand_vs_cost.png) | ![Correlation](docs/images/correlation_heatmap.png) |
+![Hero](docs/images/dashboard_hero.png)
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Language | Python 3.13 |
-| Data | Pandas 3.x + SQLAlchemy + SQLite/PostgreSQL |
-| Scraping | Requests + BeautifulSoup |
-| Validation | Pydantic v2 |
-| Dashboard | Streamlit + Plotly |
-| Testing | pytest (17 tests) |
-| CI/CD | GitHub Actions |
+| Tab | Preview | Content |
+|-----|---------|---------|
+| **Volumes** | ![Volumes](docs/images/dashboard_volumes.png) | National freight trends (2018-2024), top commodities, mode split, trade balance map, top 20 lanes |
+| **Costs & Congestion** | ![Costs](docs/images/dashboard_costs.png) | Operating cost breakdown by state, congestion heatmap, route-level costs, most efficient lanes |
+| **Routes by Mode** | ![Modes](docs/images/dashboard_modes.png) | Truck / Rail / Water flow maps with lane tables |
+| **Deep Dive** | ![Deep Dive](docs/images/dashboard_deepdive.png) | State-level drill-down: metrics, trade balance, outbound/inbound, cost summary, congestion, USDA rates |
 
 ---
 
 ## Quick Start
 
+### Local
+
 ```bash
 git clone https://github.com/juandelaf1/DashLogistics.git
 cd DashLogistics
 pip install -r requirements.txt
-python main.py                         # Run full pipeline
-streamlit run dashboard/dashboard.py   # Launch dashboard
+
+# Run the full pipeline
+python main.py
+
+# Launch the dashboard
+streamlit run dashboard/dashboard.py --server.port 8502
 ```
 
-**No PostgreSQL required** — the pipeline defaults to SQLite. Set `DATABASE_URL` in `.env` if you have PostgreSQL.
+### Docker
+
+```bash
+# Build & run (pipeline runs automatically during build)
+docker compose up -d
+
+# Open http://localhost:8502
+```
+
+The pipeline runs at build time to create the SQLite database. Subsequent runs use the persisted Docker volume.
 
 ---
 
 ## Pipeline
 
 ```
-shipping_data.csv (52 states)
-       │
-       ▼
-  ETL ──► clean + validate (Pydantic) ──► shipping_stats (SQLite/PG)
-       │
-       ▼
-  AAA fuel scraper ──► fuel_prices (50 states, live prices)
-       │
-       ▼
-  OpenWeatherMap ──► weather_data (temp, humidity, wind)
-       │
-       ▼
-  Enriched dataset ──► data/final/enriched_data.csv (50 rows × 15 cols)
-       │
-       ▼
-  KPIs + Features ──► freight_opportunity_score, efficiency_tiers, regions
+┌─────────────────────────────────────────────────────────────────────┐
+│                      DashLogistics Pipeline                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  BTS FAF 5.7.1 ──► store_freight_data() ──► freight_by_state       │
+│  (86MB, 182K rows)                       ──► freight_lanes          │
+│                                           ──► freight_mode_split    │
+│                                           ──► freight_commodities   │
+│                                           ──► freight_yearly        │
+│                                           ──► freight_trade_balance │
+│                                           ──► freight_lanes_*mode*  │
+│                                                                     │
+│  USDA Ag Transport ──► store_usda_rates() ──► truck_rates           │
+│  (SODA API, 263 rec.)                                               │
+│                                                                     │
+│  OSRM Routing ──────► osrm_routing.py ────► state_routes            │
+│  (project-osrm.org)                       ──► route_costs           │
+│                        + cost_estimator   ──► route_congestion      │
+│                                           ──► lane_efficiency       │
+│                                                                     │
+│  EIA Fuel API ───────► fetch_fuel_prices() ─► eia_fuel_prices       │
+│                                                                     │
+│  AAA Scraper ────────► scrape_fuel_prices() ─► fuel_prices          │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                    ┌─────────────────────┐
+                    │   Streamlit Dashboard │
+                    │   localhost:8502      │
+                    └─────────────────────┘
 ```
 
-### Run
+### Steps
 
-```bash
-python main.py
-```
+| # | Step | Source | Output |
+|---|------|--------|--------|
+| 1 | Download raw data | Census CSV | `data/raw/` |
+| 2 | ETL clean & validate | CSV → Pydantic | `shipping_stats` |
+| 3 | AAA fuel scraping | AAA Gas Prices | `fuel_prices` |
+| 4 | OpenWeather enrichment | OpenWeatherMap | `weather_data` |
+| 4b | EIA fuel prices | EIA API | `eia_fuel_prices` |
+| 5 | Enriched dataset | Merge + KPIs | `enriched_data.csv` |
+| **6** | **FAF freight flows** | BTS FAF 5.7.1 | 10 freight tables |
+| **7** | **USDA truck rates** | USDA Ag Transport | `truck_rates` |
+| **8** | **Cost & congestion** | OSRM + engine | `route_costs`, `route_congestion`, `lane_efficiency` |
 
-Output:
-```
-▶ Step 1: Downloading raw data...
-▶ Step 2: Running ETL (clean & validate)...   50 valid states
-▶ Step 3: Scraping fuel prices...             50 AAA price records
-▶ Step 4: Enriching with weather data...      50 OpenWeatherMap records
-▶ Step 5: Creating final enriched dataset...  50 rows × 15 columns
-✅ PIPELINE COMPLETED SUCCESSFULLY
-```
+Steps 1-5 are legacy; steps 6-8 power the current dashboard.
 
 ---
 
-## Tests
+## Data Sources
 
-```bash
-pytest -v    # 17/17 passing
-```
-
-Covers: ETL (cleaning, validation), scraper (fuel), KPIs (basic, efficiency, composite), feature engineering, logging (RunIdFormatter/Filter), pipeline integration, and edge cases (empty DataFrames).
+| Source | Data | Method |
+|--------|------|--------|
+| **BTS FAF 5.7.1** | State-to-state freight flows (tons, value, mode, commodity, 2018-2024) | Public CSV (86MB) |
+| **USDA Ag Transport** | Refrigerated truck rates per mile by lane | SODA API (free) |
+| **OSRM** | Driving distance & time between state centroids | Public routing API |
+| **AAA Gas Prices** | Regular & diesel prices by state | Web scraping |
+| **EIA** | Official weekly fuel prices by state | REST API (free key) |
 
 ---
 
 ## Project Structure
 
 ```
-src/
-├── etl/              # Pipeline: etl.py, scrapers/, enrichment/
-│   ├── enrichment/   # weather_api.py (OpenWeatherMap)
-│   └── scrapers/     # fuel_scraper.py (AAA gas prices)
-├── database/         # db.py (SQLite fallback + pandas 3.x helpers)
-├── analysis/         # kpis.py (15 metrics), features.py
-├── utils/            # state_mapper.py, download_data.py
-└── visualization/    # charts.py
-dashboard/            # dashboard.py (Streamlit)
-tests/                # 17 tests
-data/                 # raw/ → clean/ → final/
+├── main.py                       # Pipeline orchestrator (8 steps)
+├── Dockerfile                    # Multi-stage Docker build
+├── docker-compose.yml            # Container orchestration
+├── requirements.txt              # Python dependencies
+│
+├── src/
+│   ├── etl/
+│   │   ├── enrichment/
+│   │   │   ├── faf_loader.py     # FAF 5.7.1 → SQL tables
+│   │   │   ├── usda_rates.py     # USDA API client
+│   │   │   ├── osrm_routing.py   # OSRM distance/time with caching
+│   │   │   ├── eia_api.py        # EIA fuel price fetcher
+│   │   │   └── weather_api.py    # OpenWeatherMap enrichment
+│   │   ├── scrapers/
+│   │   │   └── fuel_scraper.py   # AAA gas price scraper
+│   │   └── etl.py                # Legacy ETL pipeline
+│   ├── analysis/
+│   │   ├── cost_estimator.py     # Operating cost + congestion proxy
+│   │   ├── kpis.py               # 15 derived KPIs
+│   │   └── features.py           # Feature engineering
+│   ├── database/
+│   │   └── database.py           # SQLite/PostgreSQL engine + helpers
+│   └── utils/
+│       ├── state_mapper.py       # FIPS/state name/code mapping
+│       └── download_data.py      # Remote file downloader
+│
+├── dashboard/
+│   └── dashboard.py              # Streamlit app (4 tabs)
+│
+└── data/
+    ├── raw/                      # Raw datasets (FAF zip, etc.)
+    ├── clean/                    # Cleaned intermediate files
+    ├── final/                    # Enriched CSV outputs
+    └── dashlogistics.db          # Main SQLite database
 ```
 
 ---
 
-## Generated KPIs (15 metrics)
+## Feature Engineering
 
-| Group | Metrics |
-|-------|---------|
-| Basic | total_states, total_population, avg_population, max/min_population, population_std, top/bottom_state |
-| Efficiency | avg_efficiency_score, efficiency_score (per state), efficiency_percentile, efficiency_tier |
-| Fuel | fuel_cost_index, avg_diesel, avg_regular |
-| Advanced | freight_opportunity_score, logistics_demand_score, cost_efficiency_index |
+All derived from public data — no paid APIs.
 
----
-
-## Data Sources
-
-- **Population**: US Census 2014 (Plotly dataset, 52 states)
-- **Fuel**: AAA Gas Prices (live web scraping, 50 states)
-- **Weather**: OpenWeatherMap (50 states, ~30s runtime)
-- **Output**: CSV in `data/final/` + SQLite DB (`dashlogistics.db`)
+| Feature | Formula | Source |
+|---------|---------|--------|
+| **Operating Cost** | fuel + driver + maintenance per mile | EIA diesel × 6.5mpg + $35/hr + $0.15/mi |
+| **Congestion Ratio** | actual hours / free-flow hours (55mph) | OSRM actual vs ideal time |
+| **Lane Efficiency** | tons per dollar | FAF volume / operating cost |
+| **Trade Balance** | outbound - inbound tons | FAF state-level flows |
+| **Fuel Cost %** | fuel / total operating cost | Derived |
 
 ---
 
-## Roadmap
+## Environment Variables
 
-- [x] ETL pipeline (no PostgreSQL dependency)
-- [x] Interactive dashboard with maps + KPIs
-- [x] Resilient fuel scraper (real User-Agent, graceful degradation)
-- [x] Weather enrichment (OpenWeatherMap, functional)
-- [x] 17 passing tests, green CI
-- [ ] Historical fuel price tracking
-- [ ] Logistics efficiency prediction model
-- [ ] Cloud deployment (Streamlit Cloud)
-- [ ] SkyCast integration (climate module)
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `DATABASE_URL` | No | SQLite fallback | PostgreSQL connection |
+| `EIA_API_KEY` | No | — | Official fuel prices |
+| `OPENWEATHER_API_KEY` | No | — | Weather enrichment |
+
+No API keys are required for basic functionality. FAF, USDA, and OSRM data are all public/free.
 
 ---
 
-## Author
+## License
 
-**Juan de la Fuente** — [@juandelaf1](https://github.com/juandelaf1) — [LinkedIn](https://linkedin.com/in/juandelafuentelarrocca)
+MIT
 
-<p align="center">🚢 <b>DashLogistics</b> — logistics data, real decisions</p>
+---
+
+<p align="center">Data-driven logistics intelligence — built with public data.</p>
