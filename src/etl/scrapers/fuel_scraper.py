@@ -6,7 +6,8 @@ import logging
 import os
 from pydantic import BaseModel, Field, field_validator, ValidationError
 from pathlib import Path
-from src.database import get_engine
+from src.database import get_engine, write_df_to_sql
+from src.utils.state_mapper import normalize_state_code
 
 URL = "https://gasprices.aaa.com/state-gas-price-averages/"
 BASE_DIR = Path(__file__).resolve().parents[3]
@@ -17,7 +18,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 logger = logging.getLogger(__name__)
 
 class FuelPriceSchema(BaseModel):
-    state: str
+    state: str = Field(min_length=2, max_length=2)  # Código de estado (CA, NY, etc)
     regular: float = Field(gt=0)
     mid_grade: float = Field(gt=0)
     premium: float = Field(gt=0)
@@ -25,8 +26,9 @@ class FuelPriceSchema(BaseModel):
 
     @field_validator('state')
     @classmethod
-    def clean_state(cls, v):
-        return v.strip().upper()
+    def state_to_code(cls, v):
+        """Normaliza estado a código de 2 letras (CA, NY, etc)."""
+        return normalize_state_code(v)
 
 def scrape_fuel_prices():
     """
@@ -45,7 +47,12 @@ def scrape_fuel_prices():
     engine = get_engine()
     logger.info("Iniciando scraping de precios AAA")
     try:
-        response = requests.get(URL, headers={'User-Agent': 'Mozilla/5.0'}, timeout=15)
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+        }
+        response = requests.get(URL, headers=headers, timeout=15)
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -76,7 +83,15 @@ def scrape_fuel_prices():
             try:
                 # Limpiar valores numéricos
                 cleaned_row = {}
-                cleaned_row['state'] = str(row.iloc[0]).strip().upper()
+                
+                # NORMALIZAR ESTADO a código de 2 letras
+                state_raw = str(row.iloc[0]).strip().upper()
+                try:
+                    cleaned_row['state'] = normalize_state_code(state_raw)
+                except ValueError as e:
+                    logger.warning(f"Fila {index}: Estado inválido '{state_raw}': {e}")
+                    invalid_count += 1
+                    continue
                 
                 for col in ['regular', 'mid_grade', 'premium', 'diesel']:
                     if col in expected_cols:
@@ -112,8 +127,7 @@ def scrape_fuel_prices():
         df_clean['scraped_at'] = pd.Timestamp.now()
         df_clean['data_source'] = 'AAA'
 
-        # Guardar en base de datos
-        df_clean.to_sql('fuel_prices', engine, if_exists='replace', index=False)
+        write_df_to_sql(df_clean, 'fuel_prices', engine)
         
         logger.info(f"✅ {len(df_clean)} registros de precios de combustible guardados (run_id: {run_id})")
         print(f"[OK] Scraping completado: {len(df_clean)} estados procesados (run_id: {run_id})")

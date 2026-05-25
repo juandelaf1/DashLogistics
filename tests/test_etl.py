@@ -14,7 +14,7 @@ def test_clean_data_removes_invalid_rows():
     df_clean = etl.clean_data(df)
 
     assert len(df_clean) == 2
-    assert set(df_clean['state'].tolist()) == {"CALIFORNIA", "TEXAS"}
+    assert set(df_clean['state'].tolist()) == {"CA", "TX"}  # States normalized to 2-letter codes
     assert 'population_per_rank' in df_clean.columns
 
 

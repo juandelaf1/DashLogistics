@@ -106,6 +106,12 @@ ENV/
 Thumbs.db
 desktop.ini
 
+# === Database ===
+*.db
+
+# === Final data ===
+data/final/
+
 # === Testing ===
 .pytest_cache/
 .coverage

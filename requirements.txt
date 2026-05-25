@@ -1,38 +1,12 @@
-# --- Core ETL ---
 pandas==2.2.2
-numpy==2.3.4
-requests==2.32.5
-python-dotenv==1.1.1
-beautifulsoup4==4.14.2
-lxml==6.0.2
-
-# --- Database ---
-sqlalchemy==2.0.44
 psycopg2-binary==2.9.11
-alembic==1.18.3
-
-# --- Dashboard ---
+SQLAlchemy==2.0.44
+pydantic==2.12.3
 streamlit==1.50.0
 plotly==6.3.0
-folium==0.20.0
-
-# --- Visualization ---
-matplotlib==3.10.8
-seaborn==0.13.2
-
-# --- Optional ---
-openpyxl
-pyarrow==21.0.0
-
-# --- Logging ---
-python-json-logger==3.3.0
-
-# --- API ---
-flask
-fastapi
-uvicorn
-pydantic==2.12.3
-
-# --- Testing ---
+requests==2.32.5
+beautifulsoup4==4.14.2
+python-dotenv==1.1.1
 pytest==9.0.2
-pytest-cov
+lxml==5.4.0
+
