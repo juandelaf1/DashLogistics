@@ -48,6 +48,17 @@ def get_fuel_history():
         return None
 
 @st.cache_data(ttl=300)
+def get_eia_data():
+    try:
+        engine = get_engine()
+        return read_sql_query(
+            "SELECT DISTINCT state, fuel_type, ROUND(price, 2) as price, period "
+            "FROM eia_fuel_prices WHERE period = (SELECT MAX(period) FROM eia_fuel_prices) "
+            "ORDER BY state, fuel_type", engine)
+    except Exception as e:
+        return None
+
+@st.cache_data(ttl=300)
 def get_analysis_data():
     """Load enriched analysis data with efficiency scores."""
     try:
@@ -523,6 +534,36 @@ if df_shipping is not None and not df_shipping.empty:
     ))
     fig_heatmap.update_layout(title="Correlation Matrix", height=500)
     st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    # ----------------------------
+    # EIA Official Fuel Prices
+    # ----------------------------
+    df_eia = get_eia_data()
+    if df_eia is not None and not df_eia.empty:
+        st.header("📊 EIA Official Fuel Prices")
+        latest_period = df_eia['period'].iloc[0]
+        st.caption(f"Source: U.S. Energy Information Administration — Week of {latest_period}")
+
+        us_prices = df_eia[df_eia['state'] == 'US'].drop_duplicates(subset=['fuel_type']).pivot(index='fuel_type', columns='state', values='price')
+        if not us_prices.empty:
+            col1, col2, col3, col4 = st.columns(4)
+            for i, (col_w, label) in enumerate([(col1, "Regular"), (col2, "Mid-Grade"), (col3, "Premium"), (col4, "Diesel")]):
+                fuel_map = {"Regular": "regular", "Mid-Grade": "mid_grade", "Premium": "premium", "Diesel": "diesel"}
+                ft = fuel_map[label]
+                if ft in us_prices.index:
+                    val = us_prices.loc[ft, 'US']
+                    col_w.metric(f"US {label}", f"${val:.2f}")
+
+        state_prices = df_eia[df_eia['state'] != 'US'].drop_duplicates(subset=['state', 'fuel_type']).pivot(index='state', columns='fuel_type', values='price')
+        if not state_prices.empty:
+            state_prices = state_prices.reset_index()
+            fig_eia = px.bar(
+                state_prices, x='state', y='regular',
+                color='regular', color_continuous_scale='Reds',
+                title="Regular Gasoline Price by State (EIA Official)",
+                labels={'regular': 'Price ($/gal)', 'state': 'State'}
+            )
+            st.plotly_chart(fig_eia, use_container_width=True)
 
     # ----------------------------
     # Fuel Price Trends (historical)

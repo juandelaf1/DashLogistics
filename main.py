@@ -33,6 +33,7 @@ from src.utils.download_data import download_dataset
 from src.etl.etl import run_etl
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
 from src.etl.enrichment.weather_api import get_weather_data
+from src.etl.enrichment.eia_api import fetch_fuel_prices
 from src.database import get_engine, read_sql_query
 from src.analysis.kpis import KPIAnalysis
 from src.analysis.features import FeatureEngineering
@@ -198,6 +199,13 @@ def run_pipeline():
             get_weather_data()
         except Exception as e:
             logger.warning(f"Weather enrichment failed (non-critical): {e}")
+
+        # 4b. Enriquecimiento con EIA fuel data
+        logger.info("▶ Step 4b: Enriching with EIA official fuel prices...")
+        try:
+            fetch_fuel_prices()
+        except Exception as e:
+            logger.warning(f"EIA enrichment failed (non-critical): {e}")
         
         # 5. Crear dataset final
         logger.info("▶ Step 5: Creating final enriched dataset...")
