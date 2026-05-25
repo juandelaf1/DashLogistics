@@ -24,7 +24,7 @@ def get_engine():
     if db_url:
         _engine = _build_engine(db_url)
         try:
-            with _engine.connect() as conn:
+            with _engine.connect():
                 logger.info(f"[OK] Conectado a: {db_url.split('://')[0]}://...")
             return _engine
         except Exception as e:

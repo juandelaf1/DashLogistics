@@ -1,7 +1,7 @@
 # src/analysis/features.py
 import pandas as pd
 import numpy as np
-from typing import Dict, List
+from typing import Dict
 
 class FeatureEngineering:
     """Feature engineering para DashLogistics"""

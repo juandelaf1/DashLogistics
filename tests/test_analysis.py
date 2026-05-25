@@ -5,7 +5,6 @@ Tests for src/analysis/kpis.py and src/analysis/features.py
 import pytest
 import pandas as pd
 import numpy as np
-from pathlib import Path
 
 # Import analysis modules
 from src.analysis.kpis import KPIAnalysis

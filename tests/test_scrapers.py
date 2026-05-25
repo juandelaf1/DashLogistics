@@ -1,4 +1,3 @@
-import pytest
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
 
 def test_fuel_scraper_returns_data():
