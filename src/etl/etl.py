@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import pandas as pd
 from pydantic import BaseModel, Field, field_validator, ValidationError
 
-from src.database import get_engine
+from src.database import get_engine, write_df_to_sql
 from src.utils.state_mapper import normalize_state_code
 
 load_dotenv()
@@ -127,8 +127,7 @@ def run_etl():
             df_clean = df_clean.copy()
             df_clean["pipeline_run_id"] = run_id
 
-        # Es seguro usar to_sql con if_exists='replace' para pipelines idempotentes
-        df_clean.to_sql(name="shipping_stats", con=engine, if_exists="replace", index=False)
+        write_df_to_sql(df_clean, "shipping_stats", engine)
         logger.info("Tabla 'shipping_stats' actualizada con éxito en la base de datos")
         logger.info("=== ETL COMPLETADO ===")
     except Exception:

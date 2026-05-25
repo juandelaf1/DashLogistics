@@ -33,7 +33,7 @@ from src.utils.download_data import download_dataset
 from src.etl.etl import run_etl
 from src.etl.scrapers.fuel_scraper import scrape_fuel_prices
 from src.etl.enrichment.weather_api import get_weather_data
-from src.database import get_engine
+from src.database import get_engine, read_sql_query
 from src.analysis.kpis import KPIAnalysis
 from src.analysis.features import FeatureEngineering
 
@@ -69,8 +69,8 @@ def create_enriched_dataset():
         engine = get_engine()
         
         # Leer datos de todas las fuentes
-        df_shipping = pd.read_sql("SELECT * FROM shipping_stats", engine)
-        df_fuel = pd.read_sql("SELECT * FROM fuel_prices", engine)
+        df_shipping = read_sql_query("SELECT * FROM shipping_stats", engine)
+        df_fuel = read_sql_query("SELECT * FROM fuel_prices", engine)
         
         if df_shipping.empty:
             logger.warning("shipping_stats vacío")
@@ -87,7 +87,7 @@ def create_enriched_dataset():
         
         # Merge 2: + Weather (opcional, si existe tabla)
         try:
-            df_weather = pd.read_sql("SELECT * FROM weather_data", engine)
+            df_weather = read_sql_query("SELECT * FROM weather_data", engine)
             if not df_weather.empty:
                 df = df.merge(
                     df_weather[['state', 'temperature', 'condition', 'humidity', 'wind_speed', 'feels_like']],
@@ -185,9 +185,12 @@ def run_pipeline():
         logger.info("▶ Step 2: Running ETL (clean & validate)...")
         run_etl()
         
-        # 3. Scraping de combustible
+        # 3. Scraping de combustible (no crítico)
         logger.info("▶ Step 3: Scraping fuel prices...")
-        scrape_fuel_prices()
+        try:
+            scrape_fuel_prices()
+        except Exception as e:
+            logger.warning(f"Fuel scraping failed (non-critical): {e}")
         
         # 4. Enriquecimiento con clima
         logger.info("▶ Step 4: Enriching with weather data...")
