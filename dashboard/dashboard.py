@@ -23,11 +23,29 @@ def get_data():
     try:
         engine = get_engine()
         df_shipping = read_sql_query("SELECT * FROM shipping_stats", engine)
-        df_fuel = read_sql_query("SELECT * FROM fuel_prices", engine)
+        df_fuel = read_sql_query(
+            "SELECT f1.* FROM fuel_prices f1 "
+            "INNER JOIN (SELECT state, MAX(scraped_at) as latest FROM fuel_prices GROUP BY state) f2 "
+            "ON f1.state = f2.state AND f1.scraped_at = f2.latest", engine)
         return df_shipping, df_fuel
     except Exception as e:
         st.error(f"Database error: {e}")
         return None, None
+
+@st.cache_data(ttl=300)
+def get_fuel_history():
+    try:
+        engine = get_engine()
+        return read_sql_query(
+            "SELECT DATE(scraped_at) as date, "
+            "ROUND(AVG(regular), 2) as avg_regular, "
+            "ROUND(AVG(mid_grade), 2) as avg_mid_grade, "
+            "ROUND(AVG(premium), 2) as avg_premium, "
+            "ROUND(AVG(diesel), 2) as avg_diesel "
+            "FROM fuel_prices GROUP BY DATE(scraped_at) ORDER BY date", engine)
+    except Exception as e:
+        st.warning(f"Could not load fuel history: {e}")
+        return None
 
 @st.cache_data(ttl=300)
 def get_analysis_data():
@@ -505,6 +523,43 @@ if df_shipping is not None and not df_shipping.empty:
     ))
     fig_heatmap.update_layout(title="Correlation Matrix", height=500)
     st.plotly_chart(fig_heatmap, use_container_width=True)
+
+    # ----------------------------
+    # Fuel Price Trends (historical)
+    # ----------------------------
+    df_fuel_history = get_fuel_history()
+    if df_fuel_history is not None and len(df_fuel_history) > 1:
+        st.header("⛽ Fuel Price Trends")
+        fig_trends = go.Figure()
+        for col, color, name in [
+            ('avg_regular', '#3498db', 'Regular'),
+            ('avg_mid_grade', '#2ecc71', 'Mid-Grade'),
+            ('avg_premium', '#f39c12', 'Premium'),
+            ('avg_diesel', '#e74c3c', 'Diesel'),
+        ]:
+            if col in df_fuel_history.columns:
+                fig_trends.add_trace(go.Scatter(
+                    x=df_fuel_history['date'], y=df_fuel_history[col],
+                    mode='lines+markers', name=name,
+                    line=dict(color=color, width=2),
+                    marker=dict(size=8)
+                ))
+        fig_trends.update_layout(
+            title="National Average Fuel Prices Over Time",
+            xaxis_title="Date", yaxis_title="Price (USD/gal)",
+            height=500, hovermode='x unified'
+        )
+        st.plotly_chart(fig_trends, use_container_width=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            latest = df_fuel_history.iloc[-1]
+            st.metric("Current Avg Regular", f"${latest['avg_regular']}")
+        with col2:
+            if len(df_fuel_history) > 1:
+                prev = df_fuel_history.iloc[-2]
+                change = latest['avg_regular'] - prev['avg_regular']
+                st.metric("Regular Change", f"{change:+.3f}", delta=f"{change:+.3f}")
 
 else:
     st.error("❌ No data available")

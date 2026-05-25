@@ -127,8 +127,8 @@ def scrape_fuel_prices():
         df_clean['scraped_at'] = pd.Timestamp.now()
         df_clean['data_source'] = 'AAA'
 
-        write_df_to_sql(df_clean, 'fuel_prices', engine)
-        
+        write_df_to_sql(df_clean, 'fuel_prices', engine, if_exists="append")
+
         logger.info(f"✅ {len(df_clean)} registros de precios de combustible guardados (run_id: {run_id})")
         print(f"[OK] Scraping completado: {len(df_clean)} estados procesados (run_id: {run_id})")
         
