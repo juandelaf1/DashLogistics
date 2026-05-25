@@ -5,10 +5,11 @@ import plotly.graph_objects as go
 import os
 import sys
 from pathlib import Path
-from sqlalchemy import create_engine, text
 from dotenv import load_dotenv
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
+
+from src.database import get_engine, read_sql_query
 
 load_dotenv()
 
@@ -20,9 +21,9 @@ st.set_page_config(page_title="DashLogistics MVP", layout="wide")
 @st.cache_data(ttl=300)
 def get_data():
     try:
-        engine = create_engine(os.getenv("DATABASE_URL"))
-        df_shipping = pd.read_sql(text("SELECT * FROM shipping_stats"), engine)
-        df_fuel = pd.read_sql(text("SELECT * FROM fuel_prices"), engine)
+        engine = get_engine()
+        df_shipping = read_sql_query("SELECT * FROM shipping_stats", engine)
+        df_fuel = read_sql_query("SELECT * FROM fuel_prices", engine)
         return df_shipping, df_fuel
     except Exception as e:
         st.error(f"Database error: {e}")
