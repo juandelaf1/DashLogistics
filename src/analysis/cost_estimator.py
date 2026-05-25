@@ -153,7 +153,8 @@ def build_cost_features(engine):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    import sys; from pathlib import Path
+    from pathlib import Path
+    import sys
     sys.path.append(str(Path(__file__).resolve().parents[2]))
     from src.database import get_engine
     e = get_engine()

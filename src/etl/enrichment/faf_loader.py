@@ -45,7 +45,6 @@ def load_faf(filename=FAF_FILENAME):
         try:
             r = requests.get(FAF_DOWNLOAD_URL, timeout=600, stream=True)
             r.raise_for_status()
-            total = int(r.headers.get("content-length", 0))
             downloaded = 0
             with open(faf_path, "wb") as f:
                 for chunk in r.iter_content(chunk_size=8192):
@@ -54,8 +53,8 @@ def load_faf(filename=FAF_FILENAME):
             print(f"[FAF] Downloaded {downloaded / 1024 / 1024:.0f} MB")
         except Exception as e:
             print(f"[FAF] Download failed: {e}")
-            print(f"[FAF] Please manually download from:")
-            print(f"      https://www.bts.gov/faf")
+            print("[FAF] Please manually download from:")
+            print("      https://www.bts.gov/faf")
             print(f"      and place the zip at: {faf_path}")
             raise
     zf = zipfile.ZipFile(faf_path)
@@ -125,7 +124,7 @@ def state_aggregation(df):
 
 def lanes_aggregation(df, year=2024):
     """Get top origin-destination lanes by tonnage."""
-    t_col, v_col = f"tons_{year}", f"value_{year}"
+    t_col = f"tons_{year}"
     lanes = df.groupby(["origin", "destination", "commodity", "mode"])[[t_col]].sum().reset_index()
     lanes = lanes.sort_values(t_col, ascending=False)
     lanes["tons_m"] = (lanes[t_col] / 1e3).round(2)
@@ -239,5 +238,5 @@ if __name__ == "__main__":
     print(modes.to_string(index=False))
 
     top = lanes_aggregation(df)
-    print(f"\nTop lanes (2024):")
+    print("\nTop lanes (2024):")
     print(top.head(10).to_string(index=False))
