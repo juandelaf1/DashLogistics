@@ -100,7 +100,7 @@ def fetch_fuel_prices():
     df = df.drop_duplicates(subset=["state", "fuel_type", "period"])
 
     engine = get_engine()
-    write_df_to_sql(df, "eia_fuel_prices", engine, if_exists="append")
+    write_df_to_sql(df, "eia_fuel_prices", engine, if_exists="replace")
     logger.info(f"{len(df)} EIA fuel price records saved")
     return df
 
