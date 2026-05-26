@@ -1,186 +1,181 @@
-# DashLogistics — US Freight Intelligence
+# DashLogistics — Logistics Intelligence Pipeline
 
+[![CI](https://img.shields.io/github/actions/workflow/status/juandelaf1/DashLogistics/ci.yml?branch=master&label=CI&logo=github)](https://github.com/juandelaf1/DashLogistics/actions)
 [![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://python.org)
+[![Tests](https://img.shields.io/badge/Tests-17%2F17-brightgreen)](tests/)
 [![Streamlit](https://img.shields.io/badge/Dashboard-Streamlit-red?logo=streamlit)](https://streamlit.io)
 [![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker)](https://docker.com)
-[![Data](https://img.shields.io/badge/Data-FAF%205.7.1%20|%20USDA%20|%20AAA%20|%20EIA-lightgrey)](https://www.bts.gov/faf)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-> End-to-end logistics intelligence platform. Real public data — BTS FAF freight flows, USDA truck rates, AAA/EIA fuel prices — transformed into interactive maps, cost models, and congestion analytics.
-
----
-
-## Dashboard Preview
-
-![Hero](docs/images/dashboard_hero.png)
-
-| Tab | Preview | Content |
-|-----|---------|---------|
-| **Volumes** | ![Volumes](docs/images/dashboard_volumes.png) | National freight trends (2018-2024), top commodities, mode split, trade balance map, top 20 lanes |
-| **Costs & Congestion** | ![Costs](docs/images/dashboard_costs.png) | Operating cost breakdown by state, congestion heatmap, route-level costs, most efficient lanes |
-| **Routes by Mode** | ![Modes](docs/images/dashboard_modes.png) | Truck / Rail / Water flow maps with lane tables |
-| **Deep Dive** | ![Deep Dive](docs/images/dashboard_deepdive.png) | State-level drill-down: metrics, trade balance, outbound/inbound, cost summary, congestion, USDA rates |
+> **From public data to logistics intelligence.**  
+> An end-to-end data pipeline that ingests, models, and visualizes real US freight data — demonstrating an architecture designed for portability to any region (EU, LATAM, APAC).
 
 ---
 
-## Quick Start
+## Dashboard
 
-### Local
+![Dashboard Overview](docs/images/dashboard_full.png)
 
-```bash
-git clone https://github.com/juandelaf1/DashLogistics.git
-cd DashLogistics
-pip install -r requirements.txt
-
-# Run the full pipeline
-python main.py
-
-# Launch the dashboard
-streamlit run dashboard/dashboard.py --server.port 8502
-```
-
-### Docker
-
-```bash
-# Build & run (pipeline runs automatically during build)
-docker compose up -d
-
-# Open http://localhost:8502
-```
-
-The pipeline runs at build time to create the SQLite database. Subsequent runs use the persisted Docker volume.
+| Tab | Preview |
+|-----|---------|
+| **Volumes** — trends, commodities, mode split, trade balance | ![Volumes](docs/images/dashboard_volumes.png) |
+| **Costs & Congestion** — operating cost, congestion heatmap, efficient lanes | ![Costs](docs/images/dashboard_costs.png) |
+| **Routes by Mode** — Truck / Rail / Water flow maps | ![Modes](docs/images/dashboard_modes.png) |
+| **Deep Dive** — state-level drill-down with all metrics | ![Deep Dive](docs/images/dashboard_deepdive.png) |
 
 ---
 
-## Pipeline
+## What This Project Demonstrates
+
+This is not a shipping product — it's a **portfolio of data engineering & analytics skills** built with real logistics data:
+
+| Skill | Implementation |
+|-------|---------------|
+| **ETL Pipeline Design** | Multi-stage ingestion from 5+ public sources (CSV, REST APIs, web scraping) |
+| **Data Modeling** | Aggregation, derived features, trade balance, congestion proxy |
+| **Cost Analytics** | Operating cost engine: fuel + driver + maintenance per route |
+| **Geospatial Analysis** | OSRM routing, state-to-state distance caching, flow visualization |
+| **Dashboard Engineering** | Streamlit + Plotly with interactive mapping and multi-tab UX |
+| **Infrastructure** | Docker containerization, multi-stage builds, GitHub Actions CI |
+| **Resilience** | SQLite fallback, graceful degradation on API failures, retry logic |
+
+The architecture is designed to be **adapted to local data sources** in any market — Eurostat (EU), INE (LATAM), or municipal transit authorities — making this a template for logistics intelligence worldwide.
+
+---
+
+## Pipeline Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      DashLogistics Pipeline                         │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  BTS FAF 5.7.1 ──► store_freight_data() ──► freight_by_state       │
-│  (86MB, 182K rows)                       ──► freight_lanes          │
-│                                           ──► freight_mode_split    │
-│                                           ──► freight_commodities   │
-│                                           ──► freight_yearly        │
-│                                           ──► freight_trade_balance │
-│                                           ──► freight_lanes_*mode*  │
-│                                                                     │
-│  USDA Ag Transport ──► store_usda_rates() ──► truck_rates           │
-│  (SODA API, 263 rec.)                                               │
-│                                                                     │
-│  OSRM Routing ──────► osrm_routing.py ────► state_routes            │
-│  (project-osrm.org)                       ──► route_costs           │
-│                        + cost_estimator   ──► route_congestion      │
-│                                           ──► lane_efficiency       │
-│                                                                     │
-│  EIA Fuel API ───────► fetch_fuel_prices() ─► eia_fuel_prices       │
-│                                                                     │
-│  AAA Scraper ────────► scrape_fuel_prices() ─► fuel_prices          │
-│                                                                     │
-└─────────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-                    ┌─────────────────────┐
-                    │   Streamlit Dashboard │
-                    │   localhost:8502      │
-                    └─────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           DATA INGESTION LAYER                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  BTS FAF 5.7.1 ────► CSV (86MB) ──► FAF Loader ──► 10 relational tables    │
+│  USDA Ag Transport ─► SODA API ────► USDA Client ──► truck_rates (263 rec)  │
+│  OSRM ──────────────► Public API ─► OSRM Router ──► state_routes (625)      │
+│  EIA ───────────────► REST API ───► EIA Fetcher ───► eia_fuel_prices        │
+│  AAA ───────────────► Scraper ─────► Fuel Parser ──► fuel_prices (50 states)│
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           FEATURE ENGINEERING                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Operating Cost = fuel_cost + driver_cost + maint_cost per mile             │
+│  Fuel Cost     = miles / 6.5mpg × diesel_price                              │
+│  Driver Cost   = hours × $35/hr                                             │
+│  Maintenance   = miles × $0.15/mi                                           │
+│  Congestion    = actual_time / freeflow_time (55mph)                        │
+│  Lane Efficiency = tons_per_dollar                                          │
+│  Trade Balance = outbound - inbound tons per state                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           VISUALIZATION LAYER                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  Streamlit Dashboard ──── 4 tabs ──── Interactive choropleth map            │
+│  Port 8502                 Flow lines          Select-state drill-down      │
+│                            KPI cards           USDA rate comparison         │
+│                            Mode split          Cost breakdown               │
+│                            Trade balance       Congestion analysis          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-### Steps
-
-| # | Step | Source | Output |
-|---|------|--------|--------|
-| 1 | Download raw data | Census CSV | `data/raw/` |
-| 2 | ETL clean & validate | CSV → Pydantic | `shipping_stats` |
-| 3 | AAA fuel scraping | AAA Gas Prices | `fuel_prices` |
-| 4 | OpenWeather enrichment | OpenWeatherMap | `weather_data` |
-| 4b | EIA fuel prices | EIA API | `eia_fuel_prices` |
-| 5 | Enriched dataset | Merge + KPIs | `enriched_data.csv` |
-| **6** | **FAF freight flows** | BTS FAF 5.7.1 | 10 freight tables |
-| **7** | **USDA truck rates** | USDA Ag Transport | `truck_rates` |
-| **8** | **Cost & congestion** | OSRM + engine | `route_costs`, `route_congestion`, `lane_efficiency` |
-
-Steps 1-5 are legacy; steps 6-8 power the current dashboard.
 
 ---
 
 ## Data Sources
 
-| Source | Data | Method |
-|--------|------|--------|
-| **BTS FAF 5.7.1** | State-to-state freight flows (tons, value, mode, commodity, 2018-2024) | Public CSV (86MB) |
-| **USDA Ag Transport** | Refrigerated truck rates per mile by lane | SODA API (free) |
-| **OSRM** | Driving distance & time between state centroids | Public routing API |
-| **AAA Gas Prices** | Regular & diesel prices by state | Web scraping |
-| **EIA** | Official weekly fuel prices by state | REST API (free key) |
+| Source | Data | Access | Refresh |
+|--------|------|--------|---------|
+| [BTS FAF 5.7.1](https://www.bts.gov/faf) | State-to-state freight flows (tons, value, mode, commodity, 2018-2024) | Public CSV (86MB) | Semi-annual |
+| [USDA Ag Transport](https://agtransport.usda.gov/) | Refrigerated truck rates per mile by lane | SODA API (free) | Quarterly |
+| [OSRM](https://project-osrm.org/) | Driving distance & time between state centroids | Public routing API | On-demand |
+| [EIA](https://www.eia.gov/opendata/) | Official weekly diesel & gasoline prices | REST API (free key) | Weekly |
+| [AAA Gas Prices](https://gasprices.aaa.com/) | Street-level fuel prices by state | Web scraping | Daily |
+
+**No API keys required for basic operation** — FAF, USDA, and OSRM are all public. EIA and weather keys are optional.
+
+---
+
+## Quick Start
+
+### Docker (recommended)
+
+```bash
+docker compose up -d
+# Open http://localhost:8502
+# Pipeline runs automatically on first start
+```
+
+### Local
+
+```bash
+pip install -r requirements.txt
+python main.py                          # Run full pipeline
+streamlit run dashboard/dashboard.py    # Launch dashboard
+```
 
 ---
 
 ## Project Structure
 
 ```
-├── main.py                       # Pipeline orchestrator (8 steps)
-├── Dockerfile                    # Multi-stage Docker build
-├── docker-compose.yml            # Container orchestration
-├── requirements.txt              # Python dependencies
+├── main.py                     # Pipeline orchestrator (8 steps)
+├── Dockerfile                  # Self-contained container
+├── docker-compose.yml          # One-command startup
+├── requirements.txt
 │
 ├── src/
-│   ├── etl/
-│   │   ├── enrichment/
-│   │   │   ├── faf_loader.py     # FAF 5.7.1 → SQL tables
-│   │   │   ├── usda_rates.py     # USDA API client
-│   │   │   ├── osrm_routing.py   # OSRM distance/time with caching
-│   │   │   ├── eia_api.py        # EIA fuel price fetcher
-│   │   │   └── weather_api.py    # OpenWeatherMap enrichment
-│   │   ├── scrapers/
-│   │   │   └── fuel_scraper.py   # AAA gas price scraper
-│   │   └── etl.py                # Legacy ETL pipeline
+│   ├── etl/enrichment/         # Data ingestion modules
+│   │   ├── faf_loader.py       # FAF 5.7.1 → SQL tables
+│   │   ├── usda_rates.py       # USDA API client
+│   │   ├── osrm_routing.py     # OSRM with SQLite cache
+│   │   ├── eia_api.py          # EIA fuel price fetcher
+│   │   └── weather_api.py      # Weather enrichment
+│   ├── etl/scrapers/           # Web scraping
+│   │   └── fuel_scraper.py     # AAA gas prices
 │   ├── analysis/
-│   │   ├── cost_estimator.py     # Operating cost + congestion proxy
-│   │   ├── kpis.py               # 15 derived KPIs
-│   │   └── features.py           # Feature engineering
-│   ├── database/
-│   │   └── database.py           # SQLite/PostgreSQL engine + helpers
+│   │   ├── cost_estimator.py   # Operating cost + congestion
+│   │   ├── kpis.py             # 15 derived KPIs
+│   │   └── features.py         # Feature engineering
+│   ├── database/database.py    # SQLite/PostgreSQL engine
 │   └── utils/
-│       ├── state_mapper.py       # FIPS/state name/code mapping
-│       └── download_data.py      # Remote file downloader
 │
-├── dashboard/
-│   └── dashboard.py              # Streamlit app (4 tabs)
-│
-└── data/
-    ├── raw/                      # Raw datasets (FAF zip, etc.)
-    ├── clean/                    # Cleaned intermediate files
-    ├── final/                    # Enriched CSV outputs
-    └── dashlogistics.db          # Main SQLite database
+├── dashboard/dashboard.py      # Streamlit app (401 lines)
+├── tests/                      # 17 pytest tests
+└── data/                       # Raw → Clean → SQLite
 ```
 
 ---
 
-## Feature Engineering
+## Tests & CI
 
-All derived from public data — no paid APIs.
+```bash
+pytest -v    # 17/17 passing
+```
 
-| Feature | Formula | Source |
-|---------|---------|--------|
-| **Operating Cost** | fuel + driver + maintenance per mile | EIA diesel × 6.5mpg + $35/hr + $0.15/mi |
-| **Congestion Ratio** | actual hours / free-flow hours (55mph) | OSRM actual vs ideal time |
-| **Lane Efficiency** | tons per dollar | FAF volume / operating cost |
-| **Trade Balance** | outbound - inbound tons | FAF state-level flows |
-| **Fuel Cost %** | fuel / total operating cost | Derived |
+Every push runs: `ruff lint` → `pytest` → `pip-audit` security scan (GitHub Actions).
 
 ---
 
-## Environment Variables
+## Adapting to Other Markets
 
-| Variable | Required | Default | Purpose |
-|----------|----------|---------|---------|
-| `DATABASE_URL` | No | SQLite fallback | PostgreSQL connection |
-| `EIA_API_KEY` | No | — | Official fuel prices |
-| `OPENWEATHER_API_KEY` | No | — | Weather enrichment |
+The architecture is market-agnostic. To adapt:
 
-No API keys are required for basic functionality. FAF, USDA, and OSRM data are all public/free.
+| US | Europe | LATAM |
+|----|--------|-------|
+| BTS FAF | [Eurostat](https://ec.europa.eu/eurostat) | [INE](https://ine.gov.br) / [KAP](https://datos.gob.mx) |
+| USDA | [Eurostat transport](https://ec.europa.eu/eurostat/web/transport) | Local logistics surveys |
+| OSRM | OSRM (same API, global) | OSRM (same API) |
+| AAA/EIA | [Fuel prices EU](https://ec.europa.eu/energy) | Local fuel authorities |
+
+The pipeline's modular source architecture means swapping data sources requires only a new ingestion module — the feature engineering and dashboard layers remain unchanged.
 
 ---
 
@@ -190,4 +185,8 @@ MIT
 
 ---
 
-<p align="center">Data-driven logistics intelligence — built with public data.</p>
+<p align="center">
+  Built with public data, designed for portability.
+  <br>
+  <a href="https://github.com/juandelaf1">@juandelaf1</a>
+</p>
