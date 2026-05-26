@@ -37,6 +37,7 @@ from src.etl.enrichment.eia_api import fetch_fuel_prices
 from src.etl.enrichment.faf_loader import store_freight_data
 from src.etl.enrichment.usda_rates import store_usda_rates
 from src.analysis.cost_estimator import build_cost_features
+from src.analysis.cost_predictor import train_cost_predictor
 from src.database import get_engine, read_sql_query
 from src.analysis.kpis import KPIAnalysis
 from src.analysis.features import FeatureEngineering
@@ -244,6 +245,16 @@ def run_pipeline():
         except Exception as e:
             logger.warning(f"Cost estimation failed (non-critical): {e}")
         
+        # 9. ML: cost prediction model
+        logger.info("▶ Step 9: Training cost prediction model...")
+        try:
+            engine = get_engine()
+            ml_results = train_cost_predictor(engine)
+            if ml_results:
+                logger.info(f"✅ ML: R²={ml_results['r2']}, MAE=${ml_results['mae']}, RMSE=${ml_results['rmse']}")
+        except Exception as e:
+            logger.warning(f"ML model failed (non-critical): {e}")
+
         logger.info("=" * 60)
         logger.info("✅ PIPELINE COMPLETED SUCCESSFULLY")
         logger.info("=" * 60)

@@ -19,7 +19,7 @@
 | Tab | Preview |
 |-----|---------|
 | **Volumes** — trends, commodities, mode split, trade balance | ![Volumes](docs/images/dashboard_volumes.png) |
-| **Costs & Congestion** — operating cost, congestion heatmap, efficient lanes | ![Costs](docs/images/dashboard_costs.png) |
+| **Costs & Congestion** — operating cost, congestion heatmap, efficient lanes, **ML cost prediction** | ![Costs](docs/images/dashboard_costs.png) |
 | **Routes by Mode** — Truck / Rail / Water flow maps | ![Modes](docs/images/dashboard_modes.png) |
 | **Deep Dive** — state-level drill-down with all metrics | ![Deep Dive](docs/images/dashboard_deepdive.png) |
 
@@ -34,6 +34,7 @@ This is not a shipping product — it's a **portfolio of data engineering & anal
 | **ETL Pipeline Design** | Multi-stage ingestion from 5+ public sources (CSV, REST APIs, web scraping) |
 | **Data Modeling** | Aggregation, derived features, trade balance, congestion proxy |
 | **Cost Analytics** | Operating cost engine: fuel + driver + maintenance per route |
+| **Machine Learning** | Linear regression for route cost prediction (R² = 0.987, MAE = $82) |
 | **Geospatial Analysis** | OSRM routing, state-to-state distance caching, flow visualization |
 | **Dashboard Engineering** | Streamlit + Plotly with interactive mapping and multi-tab UX |
 | **Infrastructure** | Docker containerization, multi-stage builds, GitHub Actions CI |
@@ -70,6 +71,8 @@ The architecture is designed to be **adapted to local data sources** in any mark
 │  Congestion    = actual_time / freeflow_time (55mph)                        │
 │  Lane Efficiency = tons_per_dollar                                          │
 │  Trade Balance = outbound - inbound tons per state                          │
+│  ML Model      = LinearRegression predicts total_cost from driving_mi + hr  │
+│  R² = 0.987 × MAE = $82  ×  Trained on 625 real OSRM routes                │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
                                     │
