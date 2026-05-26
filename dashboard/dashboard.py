@@ -58,7 +58,8 @@ def load():
                "freight_yearly","freight_trade_balance","truck_rates",
                "fuel_prices","shipping_stats","eia_fuel_prices",
                "freight_lanes_truck","freight_lanes_rail",
-               "route_costs","route_congestion","lane_efficiency"]
+                "route_costs","route_congestion","lane_efficiency",
+                "ml_metrics","ml_predictions"]
     for t in targets:
         try: tables[t] = read_sql_query(f"SELECT * FROM {t}", engine) if _table_exists(engine, t) else pd.DataFrame()
         except: tables[t] = pd.DataFrame()
@@ -86,6 +87,8 @@ df_eia = t["eia_fuel_prices"]
 df_costs = t["route_costs"]
 df_cong = t["route_congestion"]
 df_lane_eff = t["lane_efficiency"]
+df_ml_metrics = t["ml_metrics"]
+df_ml_pred = t["ml_predictions"]
 
 if df_state.empty and df_ship.empty:
     st.error("Run `python main.py` first"); st.stop()
@@ -318,6 +321,29 @@ with t2:
             eff_s = eff[["origin","destination","tons_m","total_cost","tons_per_dollar"]].copy()
             eff_s.index = range(1,len(eff_s)+1)
             st.dataframe(eff_s, width='stretch', hide_index=False)
+
+    if not df_ml_metrics.empty:
+        st.markdown("### ML Cost Prediction Model")
+        m = df_ml_metrics.iloc[0]
+        ck_ml = st.columns(4)
+        ck_ml[0].metric("R² Score", f"{m['r2']:.4f}")
+        ck_ml[1].metric("MAE", f"${m['mae']:.0f}")
+        ck_ml[2].metric("RMSE", f"${m['rmse']:.0f}")
+        ck_ml[3].metric("Test Routes", str(m["n_test"]))
+        st.caption("Linear regression: predicts route total cost from driving distance and time. Trained on 625 real OSRM routes.")
+
+        if not df_ml_pred.empty:
+            fig_ml = px.scatter(df_ml_pred, x="actual_cost", y="predicted_cost",
+                title="Actual vs Predicted Route Cost",
+                labels={"actual_cost":"Actual Cost ($)", "predicted_cost":"Predicted Cost ($)"},
+                hover_data={"driving_mi":":.0f", "driving_hr":":.1f"})
+            fig_ml.add_trace(go.Scatter(
+                x=[df_ml_pred["actual_cost"].min(), df_ml_pred["actual_cost"].max()],
+                y=[df_ml_pred["actual_cost"].min(), df_ml_pred["actual_cost"].max()],
+                mode="lines", name="Perfect Prediction", line=dict(dash="dash", color="#f9a84f")))
+            fig_ml.update_layout(height=350, paper_bgcolor="#0e1117", plot_bgcolor="#0e1117",
+                font_color="#f0f2f6")
+            st.plotly_chart(fig_ml, width='stretch')
 
 # ═══════════════ TAB 3: ROUTES BY MODE ═══════════════
 with t3:
