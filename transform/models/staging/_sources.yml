@@ -1,0 +1,32 @@
+version: 2
+
+sources:
+  - name: shipping_db
+    database: {{ env_var('DB_NAME', 'shipping_db') }}
+    schema: public
+    tables:
+      - name: shipping_stats
+        description: Core shipping demographics and fuel prices per US state
+        columns:
+          - name: state
+            description: US state postal code
+          - name: postal
+            description: Two-letter code
+          - name: rank
+            description: Population rank
+          - name: population
+          - name: regular
+          - name: mid_grade
+          - name: premium
+          - name: diesel
+          - name: pipeline_run_id
+      - name: fuel_prices
+        description: Denormalized fuel prices with timestamp
+        columns:
+          - name: state
+          - name: regular
+          - name: mid_grade
+          - name: premium
+          - name: diesel
+          - name: scraped_at
+          - name: pipeline_run_id
