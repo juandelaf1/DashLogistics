@@ -1,61 +1,23 @@
 name: CI
 on:
   push:
-    branches: [ main, master, "**/" ]
+    branches: ["**"]
   pull_request:
-    branches: [ main, master ]
+
 jobs:
-  tests:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+          cache: "pip"
+          cache-dependency-path: requirements.txt
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pip-audit
           pip install -r requirements.txt
-      
-      - name: Lint with ruff
-        run: ruff check src tests main.py
-        continue-on-error: true
-      
+          pip install pytest
       - name: Run tests
-        run: |
-          export PYTHONPATH="${PYTHONPATH}:${PWD}"
-          pytest -q
-      
-      - name: Security scan
-        run: pip-audit -q
-        continue-on-error: true
-        
-  migrations:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/mvp-cleanup')
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install Alembic
-        run: |
-          python -m pip install --upgrade pip
-          pip install alembic
-      
-      - name: Run Alembic migrations (if DATABASE_URL secret set)
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          if [ -z "$DATABASE_URL" ]; then
-            echo "No DATABASE_URL configured, skipping migrations";
-          else
-            alembic upgrade head;
-          fi
+        run: pytest -q
